@@ -1,4 +1,4 @@
-const BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:8000';
+const BASE = import.meta.env.VITE_API_URL ?? '/api';
 
 export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
@@ -9,5 +9,7 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
     const error = await res.json().catch(() => ({ detail: res.statusText }));
     throw new Error(error.detail ?? 'Request failed');
   }
+  // 204 No Content (e.g. DELETE) — return undefined
+  if (res.status === 204) return undefined as T;
   return res.json();
 }
