@@ -25,6 +25,14 @@ export function useTransactions(filters: TransactionFilters) {
   });
 }
 
+export function useTransaction(uuid: string | null) {
+  return useQuery({
+    queryKey: ['transaction', uuid],
+    queryFn: () => apiFetch<TransactionResponse>(`/transactions/${uuid}`),
+    enabled: !!uuid,
+  });
+}
+
 export function useTransactionStats(filters: TransactionFilters) {
   return useQuery({
     queryKey: ['transactions', 'stats', filters],

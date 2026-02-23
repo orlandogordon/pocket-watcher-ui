@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
 import { format, parseISO } from 'date-fns';
-import { Plus, Pencil, Trash2, X } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, Tag } from 'lucide-react';
 import { useTransactions, useTransactionStats } from '@/hooks/useTransactions';
 import { useAccounts } from '@/hooks/useAccounts';
 import { useCategories } from '@/hooks/useCategories';
+import { useTags } from '@/hooks/useTags';
 import { formatCurrency } from '@/lib/format';
 import { TransactionFormDialog } from '@/components/transactions/TransactionFormDialog';
 import { DeleteTransactionDialog } from '@/components/transactions/DeleteTransactionDialog';
+import { ManageTagsDialog } from '@/components/tags/ManageTagsDialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -44,6 +46,7 @@ const EMPTY_FILTERS: TransactionFilters = {
   account_uuid: undefined,
   category_uuid: undefined,
   subcategory_uuid: undefined,
+  tag_uuid: undefined,
   transaction_type: undefined,
   date_from: undefined,
   date_to: undefined,
@@ -58,6 +61,7 @@ export function TransactionsPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<TransactionResponse | undefined>();
   const [deleteTarget, setDeleteTarget] = useState<TransactionResponse | null>(null);
+  const [tagsTargetId, setTagsTargetId] = useState<string | null>(null);
 
   const activeFilters: TransactionFilters = {
     ...filters,
@@ -71,6 +75,7 @@ export function TransactionsPage() {
   const { data: stats } = useTransactionStats(filters);
   const { data: accounts } = useAccounts();
   const { data: categories } = useCategories();
+  const { data: tags } = useTags();
 
   const accountMap = new Map((accounts ?? []).map((a) => [a.uuid, a.account_name]));
   const allCategories = categories ?? [];
@@ -245,6 +250,29 @@ export function TransactionsPage() {
           </SelectContent>
         </Select>
 
+        <Select
+          value={filters.tag_uuid ?? '_all_'}
+          onValueChange={(v) => setFilter('tag_uuid', v === '_all_' ? undefined : v)}
+        >
+          <SelectTrigger className="w-36">
+            <SelectValue placeholder="All tags" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="_all_">All tags</SelectItem>
+            {(tags ?? []).map((t) => (
+              <SelectItem key={t.id} value={t.id}>
+                <span className="flex items-center gap-1.5">
+                  <span
+                    className="inline-block h-2.5 w-2.5 rounded-full shrink-0"
+                    style={{ backgroundColor: t.color }}
+                  />
+                  {t.tag_name}
+                </span>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
         <Input
           type="date"
           className="w-36"
@@ -373,6 +401,15 @@ export function TransactionsPage() {
                           size="icon"
                           variant="ghost"
                           className="h-7 w-7"
+                          title="Manage tags"
+                          onClick={() => setTagsTargetId(tx.id)}
+                        >
+                          <Tag className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-7 w-7"
                           onClick={() => openEdit(tx)}
                         >
                           <Pencil className="h-3.5 w-3.5" />
@@ -436,6 +473,12 @@ export function TransactionsPage() {
           if (!open) setDeleteTarget(null);
         }}
         transaction={deleteTarget}
+      />
+      <ManageTagsDialog
+        open={!!tagsTargetId}
+        onOpenChange={(open) => { if (!open) setTagsTargetId(null); }}
+        transactionId={tagsTargetId}
+        allTags={tags ?? []}
       />
     </div>
   );

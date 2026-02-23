@@ -53,6 +53,7 @@ export interface TransactionFilters {
   account_uuid?: string;
   category_uuid?: string;
   subcategory_uuid?: string;
+  tag_uuid?: string;
   transaction_type?: string;
   date_from?: string;
   date_to?: string;
