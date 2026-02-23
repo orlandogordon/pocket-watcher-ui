@@ -1,0 +1,72 @@
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { apiFetch } from '@/lib/api';
+import type {
+  TransactionCreate,
+  TransactionFilters,
+  TransactionResponse,
+  TransactionStats,
+} from '@/types/transactions';
+
+function buildQuery(filters: TransactionFilters): string {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(filters)) {
+    if (value !== undefined && value !== '' && value !== null) {
+      params.set(key, String(value));
+    }
+  }
+  const qs = params.toString();
+  return qs ? `?${qs}` : '';
+}
+
+export function useTransactions(filters: TransactionFilters) {
+  return useQuery({
+    queryKey: ['transactions', filters],
+    queryFn: () => apiFetch<TransactionResponse[]>(`/transactions/${buildQuery(filters)}`),
+  });
+}
+
+export function useTransactionStats(filters: TransactionFilters) {
+  return useQuery({
+    queryKey: ['transactions', 'stats', filters],
+    queryFn: () => apiFetch<TransactionStats>(`/transactions/stats${buildQuery(filters)}`),
+  });
+}
+
+export function useCreateTransaction() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: TransactionCreate) =>
+      apiFetch<TransactionResponse>('/transactions/', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+    },
+  });
+}
+
+export function useUpdateTransaction() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ uuid, data }: { uuid: string; data: TransactionCreate }) =>
+      apiFetch<TransactionResponse>(`/transactions/${uuid}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+    },
+  });
+}
+
+export function useDeleteTransaction() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (uuid: string) =>
+      apiFetch<void>(`/transactions/${uuid}`, { method: 'DELETE' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+    },
+  });
+}
