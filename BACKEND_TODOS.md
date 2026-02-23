@@ -32,6 +32,19 @@
 
 ## Endpoint Improvements
 
+### `GET /budgets/` — per-category `spent_amount` is always `null`
+- With `?include_spending=true`, the top-level `total_spent` is calculated correctly (e.g.
+  `"416.49"`), but `budget_categories[n].spent_amount`, `remaining_amount`, and
+  `percentage_used` are all returned as `null` for every category.
+- **Requirement:** The per-category spending aggregation needs to be fixed so that
+  `spent_amount` is populated for each `BudgetCategoryResponse` by summing transactions
+  whose `category_uuid` matches and whose `transaction_date` falls within the budget's
+  `start_date`–`end_date` range.
+- The frontend dashboard reads `spent_amount` per category to render progress bars — it will
+  work correctly once this is fixed (null is already handled as $0.00 in the UI).
+
+
+
 ### HTTP status codes — all endpoints return 200
 - All endpoints currently return `200 OK` regardless of the operation.
 - **Requirement:** Follow REST conventions:

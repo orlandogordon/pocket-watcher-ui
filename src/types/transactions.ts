@@ -11,12 +11,14 @@ export interface EmbeddedCategory {
   parent_category_uuid: string | null;
 }
 
+export type TransactionType = 'PURCHASE' | 'WITHDRAWAL' | 'FEE' | 'DEPOSIT' | 'CREDIT' | 'INTEREST' | 'TRANSFER';
+
 export interface TransactionResponse {
   id: string;
   account_uuid: string;
   transaction_date: string;
   amount: string;
-  transaction_type: string;
+  transaction_type: TransactionType;
   description: string;
   merchant_name?: string;
   category: EmbeddedCategory | null;
