@@ -13,7 +13,7 @@ import { ArrowRight } from 'lucide-react';
 
 import { useAccountStats } from '@/hooks/useAccounts';
 import { useTransactions } from '@/hooks/useTransactions';
-import { useActiveBudgets } from '@/hooks/useBudgets';
+import { useActiveBudgets, useBudgetPerformance } from '@/hooks/useBudgets';
 import { useNetWorthHistory } from '@/hooks/useNetWorthHistory';
 import { formatCurrency } from '@/lib/format';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -61,6 +61,7 @@ export function DashboardPage() {
   }));
 
   const activeBudget = activeBudgets?.[0];
+  const { data: activeBudgetPerformance } = useBudgetPerformance(activeBudget?.id ?? '');
 
   return (
     <div className="p-6 space-y-6">
@@ -157,23 +158,20 @@ export function DashboardPage() {
             ) : (
               <div className="space-y-3">
                 <p className="text-sm font-semibold">{activeBudget.budget_name}</p>
-                {activeBudget.budget_categories.slice(0, 6).map((cat) => {
-                  const spent = parseFloat(cat.spent_amount ?? '0') || 0;
-                  const allocated = parseFloat(cat.allocated_amount) || 0;
-                  const pct = allocated > 0 ? Math.min(100, (spent / allocated) * 100) : 0;
-                  const over = spent > allocated;
+                {(activeBudgetPerformance ?? []).slice(0, 6).map((item) => {
+                  const pct = Math.min(100, item.percentage_used ?? 0);
                   return (
-                    <div key={cat.id} className="space-y-1">
+                    <div key={item.category_uuid} className="space-y-1">
                       <div className="flex justify-between text-xs gap-2">
-                        <span className="truncate text-muted-foreground">{cat.category.name}</span>
-                        <span className={`shrink-0 ${over ? 'text-red-600 font-medium' : ''}`}>
-                          {formatCurrency(cat.spent_amount ?? '0')} / {formatCurrency(cat.allocated_amount)}
+                        <span className="truncate text-muted-foreground">{item.category_name}</span>
+                        <span className={`shrink-0 ${item.over_budget ? 'text-red-600 font-medium' : ''}`}>
+                          {formatCurrency(item.spent_amount)} / {formatCurrency(item.allocated_amount)}
                         </span>
                       </div>
                       <div className="h-1.5 w-full rounded-full bg-secondary">
                         <div
                           className={`h-1.5 rounded-full transition-all ${
-                            over ? 'bg-red-500' : 'bg-primary'
+                            item.over_budget ? 'bg-red-500' : 'bg-primary'
                           }`}
                           style={{ width: `${pct}%` }}
                         />
@@ -181,9 +179,12 @@ export function DashboardPage() {
                     </div>
                   );
                 })}
-                {activeBudget.budget_categories.length > 6 && (
+                {!activeBudgetPerformance && (
+                  <p className="text-xs text-muted-foreground">Loading categories...</p>
+                )}
+                {activeBudgetPerformance && activeBudgetPerformance.length > 6 && (
                   <p className="text-xs text-muted-foreground pt-1">
-                    +{activeBudget.budget_categories.length - 6} more categories
+                    +{activeBudgetPerformance.length - 6} more categories
                   </p>
                 )}
               </div>

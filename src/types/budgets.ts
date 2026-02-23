@@ -28,3 +28,31 @@ export interface BudgetResponse {
   created_at: string;
   updated_at: string;
 }
+
+export interface BudgetCategoryCreate {
+  category_uuid: string;
+  allocated_amount: string;
+}
+
+export interface BudgetCreate {
+  budget_name: string;
+  start_date: string;
+  end_date: string;
+  categories: BudgetCategoryCreate[];
+}
+
+export interface BudgetUpdate {
+  budget_name: string;
+  start_date: string;
+  end_date: string;
+}
+
+export interface BudgetPerformanceItem {
+  category_uuid: string;
+  category_name: string;
+  allocated_amount: string;
+  spent_amount: string;
+  remaining_amount: string;
+  percentage_used: number;
+  over_budget: boolean;
+}
