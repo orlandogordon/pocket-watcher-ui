@@ -32,6 +32,51 @@
 
 ## Endpoint Improvements
 
+### `POST /uploads/preview/{id}/reject-item` — reject a unique (non-duplicate) ready-to-import item
+- `POST /uploads/preview/{id}/review-duplicate` returns 404 for items with `source: 'unique'`
+  because it only handles items that went through the duplicate review flow.
+- Users need a way to exclude individual unique transactions from the import before confirming.
+- **Requirement:** Add an endpoint (e.g. `POST /uploads/preview/{id}/reject-item` with body
+  `{ "temp_id": "..." }`) that moves a unique ready-to-import item to a rejected/skipped state.
+  Should return the full updated `PreviewResponse` like the other preview mutation endpoints.
+- **Frontend note:** Once available, wire up the reject (X) button in `ReadyToImportTable` for
+  `source === 'unique'` items. Currently the button is hidden for those items. Update
+  `useStatementUpload.ts` to add a `useRejectUniqueItem(sessionId)` hook calling the new endpoint.
+
+### Bulk state-transition endpoints for preview items
+- Currently every state change (approve, reject, undo_reject, reject-item) requires one API
+  call per item. When the user bulk-selects many rows and clicks a bulk action, the frontend
+  fires N sequential requests, which is slow and can cause race conditions.
+- **Requirement:** Add bulk variants of the preview mutation endpoints, e.g.:
+  - `POST /uploads/preview/{id}/bulk-review-duplicate` with body
+    `{ "items": [{ "temp_id": "...", "action": "approve|reject|undo_reject" }] }`
+  - `POST /uploads/preview/{id}/bulk-reject-item` with body
+    `{ "temp_ids": ["...", "..."] }`
+  Both should process all items atomically and return the full updated `PreviewResponse`.
+- **Frontend note:** Once available, update `useStatementUpload.ts` with bulk mutation hooks
+  and call them from `PendingReviewTable` and `ReadyToImportTable` bulk action footers instead
+  of looping over individual calls.
+
+### `GET /uploads/previews` — list active preview sessions for the current user
+- There is currently no way to retrieve in-progress upload preview sessions after navigating
+  away from the uploads page. The session ID is only held in frontend local state and is lost
+  on refresh or navigation.
+- **Requirement:** Add `GET /uploads/previews` returning all unexpired Redis-backed preview
+  sessions for the current user (user_id=1), e.g.:
+  ```json
+  [
+    {
+      "preview_session_id": "abc123",
+      "institution": "tdbank",
+      "expires_at": "2026-02-23T18:00:00Z",
+      "summary": { "total_parsed": 42, "pending_review": 5, "ready_to_import": 37, "rejected": 0, "can_confirm": false }
+    }
+  ]
+  ```
+- **Frontend note:** Once available, the uploads page upload form can display a "Resume
+  session" list above the upload form, fetching this endpoint on mount. Each entry would
+  link directly into the preview step for that session ID.
+
 ### `GET /budgets/` — per-category `spent_amount` is always `null`
 - With `?include_spending=true`, the top-level `total_spent` is calculated correctly (e.g.
   `"416.49"`), but `budget_categories[n].spent_amount`, `remaining_amount`, and

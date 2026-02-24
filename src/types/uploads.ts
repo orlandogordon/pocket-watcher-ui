@@ -1,0 +1,120 @@
+import type { TransactionResponse } from './transactions';
+
+export const INSTITUTIONS = ['tdbank', 'amex', 'amzn-synchrony', 'schwab', 'tdameritrade', 'ameriprise'] as const;
+export type Institution = typeof INSTITUTIONS[number];
+
+export const INSTITUTION_LABELS: Record<Institution, string> = {
+  tdbank: 'TD Bank',
+  amex: 'American Express',
+  'amzn-synchrony': 'Amazon Synchrony',
+  schwab: 'Charles Schwab',
+  tdameritrade: 'TD Ameritrade',
+  ameriprise: 'Ameriprise',
+};
+
+export interface ParsedData {
+  transaction_date: string;
+  amount: string;
+  description: string;
+  transaction_type: string;
+  symbol?: string;
+  quantity?: string;
+}
+
+export interface EditedData {
+  description?: string;
+  amount?: string;
+  transaction_type?: string;
+  transaction_date?: string;
+  merchant_name?: string;
+  category_uuid?: string;
+  subcategory_uuid?: string;
+  tag_uuids?: string[];
+  comments?: string;
+}
+
+// Stub — expand when investments page is built
+export interface InvestmentTransactionResponse {
+  id: string;
+  transaction_date: string;
+  amount: string;
+  description: string;
+  symbol?: string;
+  quantity?: string;
+}
+
+export interface PreviewItem {
+  temp_id: string;
+  parsed_data: ParsedData;
+  edited_data: Record<string, unknown>; // cast to EditedData at render
+  review_status: 'pending' | 'approved' | 'rejected';
+  source: 'unique' | 'approved_duplicate';
+  duplicate_type?: 'database' | 'within_statement' | 'both';
+  existing_transaction?: TransactionResponse;
+  existing_investment_transaction?: InvestmentTransactionResponse;
+}
+
+export interface PreviewSummary {
+  total_parsed: number;
+  pending_review: number;
+  rejected: number;
+  ready_to_import: number;
+  can_confirm: boolean;
+}
+
+export interface PreviewResponse {
+  preview_session_id: string;
+  expires_at: string;
+  institution: string;
+  account_info?: {
+    suggested_account_id?: string;
+    suggested_account_name?: string;
+  };
+  summary: PreviewSummary | null;
+  pending_review: {
+    transactions: PreviewItem[];
+    investment_transactions: PreviewItem[];
+  } | null;
+  ready_to_import: {
+    transactions: PreviewItem[];
+    investment_transactions: PreviewItem[];
+  } | null;
+}
+
+export type DuplicateAction = 'approve' | 'reject' | 'undo_reject';
+
+export interface ConfirmResponse {
+  transactions_created: number;
+  investment_transactions_created: number;
+  upload_job_id: number;
+}
+
+export type UploadJobStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
+
+export interface UploadJob {
+  id: number;
+  status: UploadJobStatus;
+  institution: string;
+  created_at: string;
+  completed_at?: string;
+  transactions_created?: number;
+  transactions_skipped?: number;
+  investment_transactions_created?: number;
+  investment_transactions_skipped?: number;
+  file_path?: string;
+  error_message?: string;
+}
+
+export interface SkippedItem {
+  id: number;
+  transaction_type: string;
+  reason: string;
+  skipped_transaction: {
+    date: string;
+    amount: string;
+    description: string;
+    transaction_type: string;
+    symbol?: string;
+    quantity?: string;
+  };
+}

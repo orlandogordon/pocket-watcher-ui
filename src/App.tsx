@@ -7,6 +7,8 @@ import { CategoriesPage } from '@/pages/CategoriesPage';
 import { TagsPage } from '@/pages/TagsPage';
 import { BudgetsPage } from '@/pages/BudgetsPage';
 import { BudgetDetailPage } from '@/pages/BudgetDetailPage';
+import { UploadsPage } from '@/pages/UploadsPage';
+import { UploadHistoryPage } from '@/pages/UploadHistoryPage';
 
 export default function App() {
   return (
@@ -20,6 +22,8 @@ export default function App() {
           <Route path="tags" element={<TagsPage />} />
           <Route path="budgets" element={<BudgetsPage />} />
           <Route path="budgets/:uuid" element={<BudgetDetailPage />} />
+          <Route path="uploads" element={<UploadsPage />} />
+          <Route path="uploads/history" element={<UploadHistoryPage />} />
         </Route>
       </Routes>
     </BrowserRouter>
