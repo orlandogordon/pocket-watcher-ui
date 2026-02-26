@@ -14,6 +14,20 @@
 - This is purely a backend/parser fix. The frontend correctly colors by sign and requires
   no changes once amounts are stored consistently.
 
+### Investment transaction parser — INTEREST entries have bogus `quantity` and `symbol`
+- INTEREST-type investment transactions should not have `quantity` or `price_per_share` — they
+  are flat dollar amounts, not share-based trades.
+- Some Ameriprise INTEREST entries have misleading `quantity` values (100–200) with sub-$1
+  `total_amount`, suggesting the parser is misinterpreting a statement field as quantity.
+- `symbol` on these entries is set to `"UNKNOWN"` or a string of digits instead of `null`.
+- **Requirement:**
+  - For INTEREST (and likely FEE, TRANSFER, OTHER) transaction types, the parser should set
+    `quantity` and `price_per_share` to `null` — these fields only apply to share-based types
+    (BUY, SELL, DIVIDEND, REINVESTMENT).
+  - `symbol` should be set to `null` when the parser cannot determine a real ticker symbol.
+    Never store placeholder values like `"UNKNOWN"` or raw numeric strings.
+- No frontend changes needed — the table already displays "—" for null values.
+
 ## Data Model / API
 
 ### `institution_name` on `TransactionResponse` — likely redundant
