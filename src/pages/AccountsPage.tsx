@@ -115,7 +115,8 @@ export function AccountsPage() {
             <TableBody>
               {accounts.map((account) => {
                 const balance = parseFloat(account.balance);
-                const isNegative = balance < 0;
+                const isLiability = account.account_type === 'LOAN' || account.account_type === 'CREDIT_CARD';
+                const isNegative = balance < 0 || (isLiability && balance > 0);
                 return (
                   <TableRow key={account.uuid}>
                     <TableCell className="font-medium">{account.account_name}</TableCell>

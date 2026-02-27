@@ -95,7 +95,9 @@ export function AccountFormDialog({ open, onOpenChange, account }: AccountFormDi
         institution_name: account.institution_name,
         account_number_last4: account.account_number_last4 ?? '',
         balance: account.balance ?? '',
-        interest_rate: account.interest_rate ?? '',
+        interest_rate: account.interest_rate
+          ? String(parseFloat((parseFloat(account.interest_rate) * 100).toFixed(10)))
+          : '',
         interest_rate_type: account.interest_rate_type ?? undefined,
         minimum_payment: account.minimum_payment ?? '',
         original_principal: account.original_principal ?? '',
@@ -122,7 +124,9 @@ const payload: AccountCreate = {
       ...values,
       account_number_last4: values.account_number_last4 || undefined,
       balance: values.balance || undefined,
-      interest_rate: isLoan ? values.interest_rate || undefined : undefined,
+      interest_rate: isLoan && values.interest_rate
+        ? String(parseFloat(values.interest_rate) / 100)
+        : undefined,
       interest_rate_type: isLoan ? (values.interest_rate_type || undefined) : undefined,
       minimum_payment: isLoan ? values.minimum_payment || undefined : undefined,
       original_principal: isLoan ? values.original_principal || undefined : undefined,
@@ -224,7 +228,7 @@ const payload: AccountCreate = {
               name="balance"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Starting Balance</FormLabel>
+                  <FormLabel>Balance</FormLabel>
                   <FormControl>
                     <Input placeholder="0.00" {...field} />
                   </FormControl>
@@ -269,7 +273,7 @@ const payload: AccountCreate = {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Rate Type</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value ?? ''}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select rate type" />

@@ -151,3 +151,18 @@
 ### `GET /accounts/summary` response shape
 - The frontend guide documents this as returning `{ uuid, name, type, balance }` but
   `AccountResponse` uses `account_name` not `name`. Clarify/standardize field naming.
+
+### `PUT /debt/payments/{uuid}/` — no recalculation or balance adjustment on update
+- `create_debt_payment` (in `crud_debt.py`) correctly auto-calculates principal/interest
+  splits from the account's interest rate, computes `remaining_balance_after_payment`, and
+  updates the account balance. The update path (`update_debt_payment`) does none of this —
+  it's a plain field patcher.
+- **Requirement:** The update path should:
+  1. Reverse the original payment's effect on the account balance.
+  2. Recalculate principal/interest splits if not explicitly provided.
+  3. Recompute `remaining_balance_after_payment` from the (now-reversed) account balance.
+  4. Apply the new remaining balance to the account.
+- The same gap exists for `DELETE /debt/payments/{uuid}/` — it removes the payment record
+  but does not reverse the balance change on the linked account.
+- No frontend changes needed — the form already supports omitting these fields (collapsed
+  under "Advanced") so the backend can auto-calculate on both create and update.
