@@ -59,8 +59,11 @@ export function NetWorthPage() {
     netWorth: pt.net_worth,
   }));
 
-  const allNegative = chartData.length > 0 && chartData.every((pt) => pt.netWorth < 0);
-  const chartColor = allNegative ? '#dc2626' : '#2563eb';
+  const rawHistory = netWorthHistory?.data ?? [];
+  const firstVal = rawHistory.length > 0 ? rawHistory[0].net_worth : 0;
+  const lastVal = rawHistory.length > 0 ? rawHistory[rawHistory.length - 1].net_worth : 0;
+  const trendUp = lastVal >= firstVal;
+  const chartColor = trendUp ? '#16a34a' : '#dc2626';
 
   const yFormatter = (v: number) =>
     v >= 1000 || v <= -1000 ? `$${(v / 1000).toFixed(0)}k` : `$${v}`;
@@ -149,7 +152,7 @@ export function NetWorthPage() {
                   stroke={chartColor}
                   strokeWidth={2}
                   fill="url(#nwNetWorthGrad)"
-                  baseValue={allNegative ? 'dataMax' : 'dataMin'}
+                  baseValue="dataMin"
                   dot={false}
                   activeDot={{ r: 4 }}
                 />

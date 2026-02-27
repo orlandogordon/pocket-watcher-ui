@@ -13,7 +13,12 @@ import {
   Tag,
   FolderOpen,
   Settings,
+  Sun,
+  Moon,
+  Monitor,
 } from 'lucide-react';
+import { useTheme } from '@/hooks/useTheme';
+import { Button } from '@/components/ui/button';
 
 const primaryNav = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
@@ -63,7 +68,20 @@ function NavItem({
   );
 }
 
+const themeOrder = ['system', 'light', 'dark'] as const;
+const themeIcon = { system: Monitor, light: Sun, dark: Moon } as const;
+const themeLabel = { system: 'System', light: 'Light', dark: 'Dark' } as const;
+
 export function AppLayout() {
+  const { theme, setTheme } = useTheme();
+
+  function cycleTheme() {
+    const idx = themeOrder.indexOf(theme);
+    setTheme(themeOrder[(idx + 1) % themeOrder.length]);
+  }
+
+  const ThemeIcon = themeIcon[theme];
+
   return (
     <div className="flex h-screen overflow-hidden">
       <aside className="flex w-56 shrink-0 flex-col border-r bg-sidebar">
@@ -79,6 +97,12 @@ export function AppLayout() {
           {utilityNav.map((item) => (
             <NavItem key={item.to} {...item} />
           ))}
+          <div className="mt-1 flex items-center gap-2 px-3">
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={cycleTheme}>
+              <ThemeIcon className="h-4 w-4" />
+            </Button>
+            <span className="text-xs text-muted-foreground">{themeLabel[theme]}</span>
+          </div>
         </div>
       </aside>
       <main className="flex flex-1 flex-col overflow-y-auto">

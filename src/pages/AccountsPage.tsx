@@ -53,7 +53,7 @@ export function AccountsPage() {
             <CardTitle className="text-sm font-medium text-muted-foreground">Net Worth</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold">
+            <p className={`text-2xl font-bold ${stats ? (parseFloat(stats.net_worth) >= 0 ? 'text-green-600' : 'text-red-500') : ''}`}>
               {stats ? formatCurrency(stats.net_worth) : '—'}
             </p>
           </CardContent>

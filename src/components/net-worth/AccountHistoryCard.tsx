@@ -39,8 +39,11 @@ export function AccountHistoryCard({ account, days, dateFormat }: AccountHistory
     }),
   }));
 
-  const allNegative = chartData.length > 0 && chartData.every((pt) => pt.balance < 0);
-  const strokeColor = allNegative ? '#dc2626' : '#2563eb';
+  const firstBal = chartData.length > 0 ? chartData[0].balance : 0;
+  const lastBal = chartData.length > 0 ? chartData[chartData.length - 1].balance : 0;
+  const isLiability = account.account_type === 'CREDIT_CARD' || account.account_type === 'LOAN';
+  const trendUp = lastBal >= firstBal;
+  const strokeColor = (isLiability ? !trendUp : trendUp) ? '#16a34a' : '#dc2626';
   const gradId = `balGrad-${account.uuid}`;
 
   const yFormatter = (v: number) =>
@@ -124,7 +127,7 @@ export function AccountHistoryCard({ account, days, dateFormat }: AccountHistory
                     stroke={strokeColor}
                     strokeWidth={2}
                     fill={`url(#${gradId})`}
-                    baseValue={allNegative ? 'dataMax' : 'dataMin'}
+                    baseValue="dataMin"
                     dot={false}
                     activeDot={{ r: 3 }}
                   />

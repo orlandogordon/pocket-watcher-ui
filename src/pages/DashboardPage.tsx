@@ -53,10 +53,16 @@ export function DashboardPage() {
 
   const netWorth = parseFloat(stats?.net_worth ?? '0');
 
-  const chartData = (netWorthHistory?.data ?? []).map((pt) => ({
+  const rawHistory = netWorthHistory?.data ?? [];
+  const chartData = rawHistory.map((pt) => ({
     date: format(parseISO(pt.date), 'MMM d'),
     netWorth: pt.net_worth,
   }));
+
+  const firstVal = rawHistory.length > 0 ? rawHistory[0].net_worth : 0;
+  const lastVal = rawHistory.length > 0 ? rawHistory[rawHistory.length - 1].net_worth : 0;
+  const trendUp = lastVal >= firstVal;
+  const chartColor = trendUp ? '#16a34a' : '#dc2626';
 
   const activeBudget = activeBudgets?.[0];
   const { data: activeBudgetPerformance } = useBudgetPerformance(activeBudget?.id ?? '');
@@ -101,8 +107,8 @@ export function DashboardPage() {
                 <AreaChart data={chartData} margin={{ top: 4, right: 8, left: 8, bottom: 0 }}>
                   <defs>
                     <linearGradient id="netWorthGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#2563eb" stopOpacity={0.2} />
-                      <stop offset="95%" stopColor="#2563eb" stopOpacity={0} />
+                      <stop offset="5%" stopColor={chartColor} stopOpacity={0.2} />
+                      <stop offset="95%" stopColor={chartColor} stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
@@ -133,7 +139,7 @@ export function DashboardPage() {
                   <Area
                     type="monotone"
                     dataKey="netWorth"
-                    stroke="#2563eb"
+                    stroke={chartColor}
                     strokeWidth={2}
                     fill="url(#netWorthGrad)"
                     dot={false}
