@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback, type KeyboardEvent } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -10,11 +10,17 @@ import {
   DollarSign,
   TrendingUp,
   TrendingDown,
+  ChevronRight,
+  ChevronDown,
+  Check,
+  X,
 } from 'lucide-react';
 import {
   useFinancialPlan,
   useFinancialPlanSummary,
   useDeletePlanMonth,
+  useUpdatePlanMonth,
+  useUpdatePlanExpense,
   syncPlanDates,
 } from '@/hooks/useFinancialPlans';
 import { useCategories, buildCategoryMap, getCategoryLabel } from '@/hooks/useCategories';
@@ -29,6 +35,14 @@ import { cn } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   Table,
   TableBody,
@@ -40,6 +54,7 @@ import {
 import type {
   FinancialPlanMonthResponse,
   FinancialPlanExpenseResponse,
+  ExpenseType,
 } from '@/types/financial-plans';
 
 const MONTH_NAMES = [
@@ -89,6 +104,13 @@ function StatCard({
   );
 }
 
+interface ExpenseDraft {
+  description: string;
+  amount: string;
+  expense_type: ExpenseType;
+  category_uuid: string;
+}
+
 export function PlanDetailPage() {
   const { uuid } = useParams<{ uuid: string }>();
   const navigate = useNavigate();
@@ -97,6 +119,8 @@ export function PlanDetailPage() {
   const { data: categories } = useCategories();
   const categoryMap = buildCategoryMap(categories ?? []);
   const deleteMonth = useDeletePlanMonth();
+  const updateMonth = useUpdatePlanMonth();
+  const updateExpense = useUpdatePlanExpense();
 
   // Auto-sync plan start_date/end_date when months change
   const prevMonthCountRef = useRef<number | null>(null);
@@ -109,32 +133,97 @@ export function PlanDetailPage() {
     prevMonthCountRef.current = count;
   }, [plan, uuid]);
 
+  // Expand/collapse state
+  const [expandedMonths, setExpandedMonths] = useState<Set<string>>(new Set());
+
+  // Inline edit state — month
+  const [editingMonthId, setEditingMonthId] = useState<string | null>(null);
+  const [editingMonthDraft, setEditingMonthDraft] = useState({ planned_income: '' });
+
+  // Inline edit state — expense
+  const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
+  const [editingExpenseDraft, setEditingExpenseDraft] = useState<ExpenseDraft>({
+    description: '',
+    amount: '',
+    expense_type: 'recurring',
+    category_uuid: '',
+  });
+
   // Dialog state
   const [editPlanOpen, setEditPlanOpen] = useState(false);
   const [deletePlanOpen, setDeletePlanOpen] = useState(false);
   const [monthFormOpen, setMonthFormOpen] = useState(false);
-  const [editMonth, setEditMonth] = useState<FinancialPlanMonthResponse | undefined>();
+  const [editMonthDialog, setEditMonthDialog] = useState<FinancialPlanMonthResponse | undefined>();
   const [duplicateSource, setDuplicateSource] = useState<FinancialPlanMonthResponse | undefined>();
   const [bulkMonthOpen, setBulkMonthOpen] = useState(false);
   const [expenseFormOpen, setExpenseFormOpen] = useState(false);
   const [expenseMonth, setExpenseMonth] = useState<string>('');
-  const [editExpense, setEditExpense] = useState<FinancialPlanExpenseResponse | undefined>();
+  const [editExpenseDialog, setEditExpenseDialog] = useState<FinancialPlanExpenseResponse | undefined>();
   const [deleteExpenseTarget, setDeleteExpenseTarget] = useState<FinancialPlanExpenseResponse | null>(null);
 
-  function openAddMonth() {
-    setEditMonth(undefined);
-    setDuplicateSource(undefined);
-    setMonthFormOpen(true);
+  const toggleExpand = useCallback((monthId: string) => {
+    setExpandedMonths((prev) => {
+      const next = new Set(prev);
+      if (next.has(monthId)) next.delete(monthId);
+      else next.add(monthId);
+      return next;
+    });
+  }, []);
+
+  // Start editing a month's income
+  function startEditMonth(m: FinancialPlanMonthResponse) {
+    setEditingExpenseId(null);
+    setEditingMonthId(m.id);
+    setEditingMonthDraft({ planned_income: m.planned_income });
   }
 
-  function openEditMonth(m: FinancialPlanMonthResponse) {
-    setEditMonth(m);
-    setDuplicateSource(undefined);
-    setMonthFormOpen(true);
+  function cancelEditMonth() {
+    setEditingMonthId(null);
+  }
+
+  function confirmEditMonth() {
+    if (!editingMonthId || !uuid) return;
+    updateMonth.mutate(
+      { monthUuid: editingMonthId, planUuid: uuid, data: { planned_income: editingMonthDraft.planned_income } },
+      { onSuccess: () => setEditingMonthId(null) },
+    );
+  }
+
+  // Start editing an expense
+  function startEditExpense(e: FinancialPlanExpenseResponse) {
+    setEditingMonthId(null);
+    setEditingExpenseId(e.id);
+    setEditingExpenseDraft({
+      description: e.description,
+      amount: e.amount,
+      expense_type: e.expense_type,
+      category_uuid: e.category_uuid ?? '',
+    });
+  }
+
+  function cancelEditExpense() {
+    setEditingExpenseId(null);
+  }
+
+  function confirmEditExpense() {
+    if (!editingExpenseId || !uuid) return;
+    updateExpense.mutate(
+      {
+        expenseUuid: editingExpenseId,
+        planUuid: uuid,
+        data: {
+          description: editingExpenseDraft.description,
+          amount: editingExpenseDraft.amount,
+          expense_type: editingExpenseDraft.expense_type,
+          category_uuid: editingExpenseDraft.category_uuid || undefined,
+        },
+      },
+      { onSuccess: () => setEditingExpenseId(null) },
+    );
   }
 
   function openDuplicateMonth(m: FinancialPlanMonthResponse) {
-    setEditMonth(undefined);
+    setEditMonthDialog(undefined);
     setDuplicateSource(m);
     setMonthFormOpen(true);
   }
@@ -145,15 +234,26 @@ export function PlanDetailPage() {
   }
 
   function openAddExpense(monthUuid: string) {
-    setEditExpense(undefined);
+    setEditExpenseDialog(undefined);
     setExpenseMonth(monthUuid);
     setExpenseFormOpen(true);
   }
 
-  function openEditExpense(monthUuid: string, expense: FinancialPlanExpenseResponse) {
-    setEditExpense(expense);
-    setExpenseMonth(monthUuid);
-    setExpenseFormOpen(true);
+  function openAddMonth() {
+    setEditMonthDialog(undefined);
+    setDuplicateSource(undefined);
+    setMonthFormOpen(true);
+  }
+
+  // Keyboard handlers
+  function onMonthKeyDown(e: KeyboardEvent) {
+    if (e.key === 'Enter') { e.preventDefault(); confirmEditMonth(); }
+    if (e.key === 'Escape') { e.preventDefault(); cancelEditMonth(); }
+  }
+
+  function onExpenseKeyDown(e: KeyboardEvent) {
+    if (e.key === 'Enter') { e.preventDefault(); confirmEditExpense(); }
+    if (e.key === 'Escape') { e.preventDefault(); cancelEditExpense(); }
   }
 
   if (isLoading) {
@@ -268,158 +368,352 @@ export function PlanDetailPage() {
           No months added yet. Click "Add Month" or "Add Multiple" to start planning.
         </p>
       ) : (
-        <div className="space-y-4">
-          {sortedMonths.map((m) => {
-            const totalExpenses = m.expenses.reduce(
-              (sum, e) => sum + parseFloat(e.amount),
-              0,
-            );
-            const income = parseFloat(m.planned_income);
-            const monthSavings = income - totalExpenses;
+        <div className="rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[40px]" />
+                <TableHead>Month</TableHead>
+                <TableHead className="text-right">Planned Income</TableHead>
+                <TableHead className="text-right">Total Expenses</TableHead>
+                <TableHead className="text-right">Net Surplus</TableHead>
+                <TableHead className="w-[140px]" />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {sortedMonths.map((m) => {
+                const totalExpenses = m.expenses.reduce(
+                  (sum, e) => sum + parseFloat(e.amount),
+                  0,
+                );
+                const income = parseFloat(m.planned_income);
+                const net = income - totalExpenses;
+                const isExpanded = expandedMonths.has(m.id);
+                const isEditingThis = editingMonthId === m.id;
 
-            return (
-              <Card key={m.id}>
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between flex-wrap gap-2">
-                    <div>
-                      <CardTitle className="text-base">
+                return (
+                  <React.Fragment key={m.id}>
+                    <TableRow className="group">
+                      {/* Chevron */}
+                      <TableCell className="px-2">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-7 w-7"
+                          onClick={() => toggleExpand(m.id)}
+                        >
+                          {isExpanded ? (
+                            <ChevronDown className="h-4 w-4" />
+                          ) : (
+                            <ChevronRight className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </TableCell>
+
+                      {/* Month label */}
+                      <TableCell className="font-medium">
                         {MONTH_NAMES[m.month]} {m.year}
-                      </CardTitle>
-                      <div className="flex gap-4 mt-1 text-sm text-muted-foreground">
-                        <span>
-                          Income:{' '}
-                          <span className="font-medium text-foreground tabular-nums">
+                      </TableCell>
+
+                      {/* Planned Income — inline editable */}
+                      <TableCell className="text-right">
+                        {isEditingThis ? (
+                          <Input
+                            autoFocus
+                            type="number"
+                            step="0.01"
+                            className="h-8 w-32 ml-auto text-right tabular-nums"
+                            value={editingMonthDraft.planned_income}
+                            onChange={(e) =>
+                              setEditingMonthDraft({ planned_income: e.target.value })
+                            }
+                            onKeyDown={onMonthKeyDown}
+                          />
+                        ) : (
+                          <span
+                            className="tabular-nums cursor-pointer hover:underline"
+                            onClick={() => startEditMonth(m)}
+                          >
                             {formatCurrency(m.planned_income)}
                           </span>
-                        </span>
-                        <span>
-                          Expenses:{' '}
-                          <span className="font-medium text-foreground tabular-nums">
-                            {formatCurrency(totalExpenses.toString())}
-                          </span>
-                        </span>
-                        <span>
-                          Savings:{' '}
-                          <span
-                            className={cn(
-                              'font-medium tabular-nums',
-                              monthSavings >= 0 ? 'text-green-600' : 'text-destructive',
-                            )}
-                          >
-                            {formatCurrency(monthSavings.toString())}
-                          </span>
-                        </span>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-7"
-                        onClick={() => openDuplicateMonth(m)}
-                        title="Duplicate month"
+                        )}
+                      </TableCell>
+
+                      {/* Total Expenses */}
+                      <TableCell className="text-right tabular-nums">
+                        {formatCurrency(totalExpenses.toString())}
+                      </TableCell>
+
+                      {/* Net Surplus */}
+                      <TableCell
+                        className={cn(
+                          'text-right tabular-nums font-medium',
+                          net >= 0 ? 'text-green-600' : 'text-destructive',
+                        )}
                       >
-                        <Copy className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-7"
-                        onClick={() => openEditMonth(m)}
-                        title="Edit month"
-                      >
-                        <Pencil className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-7 text-destructive hover:text-destructive"
-                        onClick={() => handleDeleteMonth(m)}
-                        title="Delete month"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  {m.expenses.length === 0 ? (
-                    <p className="text-sm text-muted-foreground mb-3">No expenses yet.</p>
-                  ) : (
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Description</TableHead>
-                          <TableHead>Type</TableHead>
-                          <TableHead>Category</TableHead>
-                          <TableHead className="text-right">Amount</TableHead>
-                          <TableHead className="w-[80px]" />
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {m.expenses.map((e) => (
-                          <TableRow key={e.id}>
-                            <TableCell className="font-medium">{e.description}</TableCell>
-                            <TableCell>
-                              <Badge
-                                variant="secondary"
-                                className={cn(
-                                  'text-xs',
-                                  e.expense_type === 'recurring'
-                                    ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
-                                    : 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
-                                )}
+                        {formatCurrency(net.toString())}
+                      </TableCell>
+
+                      {/* Actions */}
+                      <TableCell>
+                        <div className="flex items-center gap-1 justify-end">
+                          {isEditingThis ? (
+                            <>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-7 w-7 text-green-600 hover:text-green-700"
+                                onClick={confirmEditMonth}
+                                disabled={updateMonth.isPending}
                               >
-                                {e.expense_type === 'recurring' ? 'Recurring' : 'One-time'}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-muted-foreground">
-                              {e.category_uuid
-                                ? getCategoryLabel(e.category_uuid, categoryMap)
-                                : '—'}
-                            </TableCell>
-                            <TableCell className="text-right tabular-nums">
-                              {formatCurrency(e.amount)}
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-1 justify-end">
-                                <Button
-                                  size="icon"
-                                  variant="ghost"
-                                  className="h-7 w-7"
-                                  onClick={() => openEditExpense(m.id, e)}
-                                >
-                                  <Pencil className="h-3.5 w-3.5" />
-                                </Button>
-                                <Button
-                                  size="icon"
-                                  variant="ghost"
-                                  className="h-7 w-7 text-destructive hover:text-destructive"
-                                  onClick={() => setDeleteExpenseTarget(e)}
-                                >
-                                  <Trash2 className="h-3.5 w-3.5" />
-                                </Button>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  )}
-                  <div className="mt-3">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => openAddExpense(m.id)}
-                    >
-                      <Plus className="mr-1 h-3.5 w-3.5" />
-                      Add Expense
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+                                <Check className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-7 w-7 text-destructive hover:text-destructive"
+                                onClick={cancelEditMonth}
+                              >
+                                <X className="h-3.5 w-3.5" />
+                              </Button>
+                            </>
+                          ) : (
+                            <>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-7 w-7"
+                                onClick={() => openDuplicateMonth(m)}
+                                title="Duplicate month"
+                              >
+                                <Copy className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-7 w-7 text-destructive hover:text-destructive"
+                                onClick={() => handleDeleteMonth(m)}
+                                title="Delete month"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+
+                    {/* Expanded expense sub-table */}
+                    {isExpanded && (
+                      <TableRow key={`${m.id}-expenses`} className="hover:bg-transparent">
+                        <TableCell colSpan={6} className="p-0">
+                          <div className="bg-muted/30 px-6 py-3 border-t">
+                            {m.expenses.length === 0 ? (
+                              <p className="text-sm text-muted-foreground mb-3">No expenses yet.</p>
+                            ) : (
+                              <Table>
+                                <TableHeader>
+                                  <TableRow>
+                                    <TableHead>Description</TableHead>
+                                    <TableHead>Category</TableHead>
+                                    <TableHead>Type</TableHead>
+                                    <TableHead className="text-right">Amount</TableHead>
+                                    <TableHead className="w-[100px]" />
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  {m.expenses.map((e) => {
+                                    const isEditingExp = editingExpenseId === e.id;
+
+                                    return (
+                                      <TableRow key={e.id}>
+                                        {/* Description */}
+                                        <TableCell>
+                                          {isEditingExp ? (
+                                            <Input
+                                              autoFocus
+                                              className="h-8"
+                                              value={editingExpenseDraft.description}
+                                              onChange={(ev) =>
+                                                setEditingExpenseDraft((d) => ({
+                                                  ...d,
+                                                  description: ev.target.value,
+                                                }))
+                                              }
+                                              onKeyDown={onExpenseKeyDown}
+                                            />
+                                          ) : (
+                                            <span
+                                              className="font-medium cursor-pointer hover:underline"
+                                              onClick={() => startEditExpense(e)}
+                                            >
+                                              {e.description}
+                                            </span>
+                                          )}
+                                        </TableCell>
+
+                                        {/* Category */}
+                                        <TableCell>
+                                          {isEditingExp ? (
+                                            <Select
+                                              value={editingExpenseDraft.category_uuid}
+                                              onValueChange={(v) =>
+                                                setEditingExpenseDraft((d) => ({
+                                                  ...d,
+                                                  category_uuid: v === '__none__' ? '' : v,
+                                                }))
+                                              }
+                                            >
+                                              <SelectTrigger className="h-8 w-[180px]">
+                                                <SelectValue placeholder="None" />
+                                              </SelectTrigger>
+                                              <SelectContent>
+                                                <SelectItem value="__none__">None</SelectItem>
+                                                {(categories ?? []).map((c) => (
+                                                  <SelectItem key={c.id} value={c.id}>
+                                                    {getCategoryLabel(c.id, categoryMap)}
+                                                  </SelectItem>
+                                                ))}
+                                              </SelectContent>
+                                            </Select>
+                                          ) : (
+                                            <span
+                                              className="text-muted-foreground cursor-pointer hover:underline"
+                                              onClick={() => startEditExpense(e)}
+                                            >
+                                              {e.category_uuid
+                                                ? getCategoryLabel(e.category_uuid, categoryMap)
+                                                : '—'}
+                                            </span>
+                                          )}
+                                        </TableCell>
+
+                                        {/* Type */}
+                                        <TableCell>
+                                          {isEditingExp ? (
+                                            <Select
+                                              value={editingExpenseDraft.expense_type}
+                                              onValueChange={(v) =>
+                                                setEditingExpenseDraft((d) => ({
+                                                  ...d,
+                                                  expense_type: v as ExpenseType,
+                                                }))
+                                              }
+                                            >
+                                              <SelectTrigger className="h-8 w-[130px]">
+                                                <SelectValue />
+                                              </SelectTrigger>
+                                              <SelectContent>
+                                                <SelectItem value="recurring">Recurring</SelectItem>
+                                                <SelectItem value="one_time">One-time</SelectItem>
+                                              </SelectContent>
+                                            </Select>
+                                          ) : (
+                                            <span
+                                              className="cursor-pointer"
+                                              onClick={() => startEditExpense(e)}
+                                            >
+                                              <Badge
+                                                variant="secondary"
+                                                className={cn(
+                                                  'text-xs',
+                                                  e.expense_type === 'recurring'
+                                                    ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+                                                    : 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
+                                                )}
+                                              >
+                                                {e.expense_type === 'recurring' ? 'Recurring' : 'One-time'}
+                                              </Badge>
+                                            </span>
+                                          )}
+                                        </TableCell>
+
+                                        {/* Amount */}
+                                        <TableCell className="text-right">
+                                          {isEditingExp ? (
+                                            <Input
+                                              type="number"
+                                              step="0.01"
+                                              className="h-8 w-28 ml-auto text-right tabular-nums"
+                                              value={editingExpenseDraft.amount}
+                                              onChange={(ev) =>
+                                                setEditingExpenseDraft((d) => ({
+                                                  ...d,
+                                                  amount: ev.target.value,
+                                                }))
+                                              }
+                                              onKeyDown={onExpenseKeyDown}
+                                            />
+                                          ) : (
+                                            <span
+                                              className="tabular-nums cursor-pointer hover:underline"
+                                              onClick={() => startEditExpense(e)}
+                                            >
+                                              {formatCurrency(e.amount)}
+                                            </span>
+                                          )}
+                                        </TableCell>
+
+                                        {/* Actions */}
+                                        <TableCell>
+                                          <div className="flex items-center gap-1 justify-end">
+                                            {isEditingExp ? (
+                                              <>
+                                                <Button
+                                                  size="icon"
+                                                  variant="ghost"
+                                                  className="h-7 w-7 text-green-600 hover:text-green-700"
+                                                  onClick={confirmEditExpense}
+                                                  disabled={updateExpense.isPending}
+                                                >
+                                                  <Check className="h-3.5 w-3.5" />
+                                                </Button>
+                                                <Button
+                                                  size="icon"
+                                                  variant="ghost"
+                                                  className="h-7 w-7 text-destructive hover:text-destructive"
+                                                  onClick={cancelEditExpense}
+                                                >
+                                                  <X className="h-3.5 w-3.5" />
+                                                </Button>
+                                              </>
+                                            ) : (
+                                              <Button
+                                                size="icon"
+                                                variant="ghost"
+                                                className="h-7 w-7 text-destructive hover:text-destructive"
+                                                onClick={() => setDeleteExpenseTarget(e)}
+                                              >
+                                                <Trash2 className="h-3.5 w-3.5" />
+                                              </Button>
+                                            )}
+                                          </div>
+                                        </TableCell>
+                                      </TableRow>
+                                    );
+                                  })}
+                                </TableBody>
+                              </Table>
+                            )}
+                            <div className="mt-3">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => openAddExpense(m.id)}
+                              >
+                                <Plus className="mr-1 h-3.5 w-3.5" />
+                                Add Expense
+                              </Button>
+                            </div>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </React.Fragment>
+                );
+              })}
+            </TableBody>
+          </Table>
         </div>
       )}
 
@@ -439,7 +733,7 @@ export function PlanDetailPage() {
         open={monthFormOpen}
         onOpenChange={setMonthFormOpen}
         planUuid={uuid ?? ''}
-        month={editMonth}
+        month={editMonthDialog}
         sourceMonth={duplicateSource}
       />
       <BulkMonthDialog
@@ -452,7 +746,7 @@ export function PlanDetailPage() {
         onOpenChange={setExpenseFormOpen}
         planUuid={uuid ?? ''}
         monthUuid={expenseMonth}
-        expense={editExpense}
+        expense={editExpenseDialog}
       />
       <DeleteExpenseDialog
         open={!!deleteExpenseTarget}
