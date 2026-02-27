@@ -152,6 +152,40 @@
 - The frontend guide documents this as returning `{ uuid, name, type, balance }` but
   `AccountResponse` uses `account_name` not `name`. Clarify/standardize field naming.
 
+### Financial plans — auto-sync `start_date`/`end_date` from months
+- The frontend no longer exposes plan `start_date`/`end_date` as user-editable fields. Instead
+  the date range is derived from the plan's months. Currently the frontend fires a separate
+  `PUT /financial_plans/{uuid}` after every month add/delete to keep the dates in sync, which
+  is fragile and race-prone.
+- **Requirement:** In `crud_financial_plan.create_financial_plan_month` and
+  `crud_financial_plan.delete_financial_plan_month`, after the month is created/deleted,
+  recompute `start_date` and `end_date` from the plan's remaining months:
+  - `start_date` = first day of the earliest month (e.g. `2026-02-01`)
+  - `end_date` = last day of the latest month (e.g. `2026-06-30`)
+  - If no months remain, leave dates unchanged.
+  Persist the updated dates on the plan in the same transaction.
+- **Frontend note:** Once implemented, remove the `syncPlanDates()` call from the frontend
+  (`useFinancialPlans.ts` and `PlanDetailPage.tsx`).
+
+### `POST /financial_plans/{uuid}/months/bulk` — bulk month creation
+- The frontend "Add Multiple Months" feature creates N consecutive months from a template.
+  Currently it loops N times calling `POST /financial_plans/{uuid}/months` sequentially, which
+  is slow and not atomic — a failure mid-way leaves a partially created batch.
+- **Requirement:** Add a bulk endpoint:
+  ```
+  POST /financial_plans/{uuid}/months/bulk
+  Body: { "months": [ { year, month, planned_income, expenses: [...] }, ... ] }
+  Response: FinancialPlanMonth[] (201)
+  ```
+  All months and their expenses should be created in a single database transaction. On any
+  failure, roll back the entire batch.
+- Reuse the existing category UUID resolution logic from `create_financial_plan_month`.
+- If `start_date`/`end_date` auto-sync (above) is implemented, it should fire once after the
+  bulk insert, not per month.
+- **Frontend note:** Once available, update `BulkMonthDialog.tsx` to call the bulk endpoint
+  in a single request instead of looping. Update `useFinancialPlans.ts` with a
+  `useBulkCreateMonths` hook.
+
 ### `PUT /debt/payments/{uuid}/` — no recalculation or balance adjustment on update
 - `create_debt_payment` (in `crud_debt.py`) correctly auto-calculates principal/interest
   splits from the account's interest rate, computes `remaining_balance_after_payment`, and

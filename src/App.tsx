@@ -13,6 +13,8 @@ import { InvestmentsPage } from '@/pages/InvestmentsPage';
 import { InvestmentDetailPage } from '@/pages/InvestmentDetailPage';
 import { DebtPage } from '@/pages/DebtPage';
 import { DebtDetailPage } from '@/pages/DebtDetailPage';
+import { PlansPage } from '@/pages/PlansPage';
+import { PlanDetailPage } from '@/pages/PlanDetailPage';
 
 export default function App() {
   return (
@@ -32,6 +34,8 @@ export default function App() {
           <Route path="investments/:accountUuid" element={<InvestmentDetailPage />} />
           <Route path="debt" element={<DebtPage />} />
           <Route path="debt/:accountUuid" element={<DebtDetailPage />} />
+          <Route path="plans" element={<PlansPage />} />
+          <Route path="plans/:uuid" element={<PlanDetailPage />} />
         </Route>
       </Routes>
     </BrowserRouter>
