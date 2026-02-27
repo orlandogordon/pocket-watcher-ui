@@ -15,6 +15,7 @@ import { DebtPage } from '@/pages/DebtPage';
 import { DebtDetailPage } from '@/pages/DebtDetailPage';
 import { PlansPage } from '@/pages/PlansPage';
 import { PlanDetailPage } from '@/pages/PlanDetailPage';
+import { NetWorthPage } from '@/pages/NetWorthPage';
 
 export default function App() {
   return (
@@ -36,6 +37,7 @@ export default function App() {
           <Route path="debt/:accountUuid" element={<DebtDetailPage />} />
           <Route path="plans" element={<PlansPage />} />
           <Route path="plans/:uuid" element={<PlanDetailPage />} />
+          <Route path="net-worth" element={<NetWorthPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

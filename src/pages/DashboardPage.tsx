@@ -53,11 +53,9 @@ export function DashboardPage() {
 
   const netWorth = parseFloat(stats?.net_worth ?? '0');
 
-  const chartData = (netWorthHistory?.data_points ?? []).map((pt) => ({
-    date: format(parseISO(pt.value_date), 'MMM d'),
-    netWorth: parseFloat(pt.net_worth),
-    assets: parseFloat(pt.total_assets),
-    liabilities: Math.abs(parseFloat(pt.total_liabilities)),
+  const chartData = (netWorthHistory?.data ?? []).map((pt) => ({
+    date: format(parseISO(pt.date), 'MMM d'),
+    netWorth: pt.net_worth,
   }));
 
   const activeBudget = activeBudgets?.[0];

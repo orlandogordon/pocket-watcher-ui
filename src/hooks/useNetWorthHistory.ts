@@ -3,16 +3,16 @@ import { format, subDays } from 'date-fns';
 import { apiFetch } from '@/lib/api';
 
 export interface NetWorthDataPoint {
-  value_date: string;
-  total_assets: string;
-  total_liabilities: string;
-  net_worth: string;
+  date: string;
+  net_worth: number;
+  total_unrealized_gains: number | null;
 }
 
 interface NetWorthHistoryResponse {
-  data_points: NetWorthDataPoint[];
+  data: NetWorthDataPoint[];
   start_date: string;
   end_date: string;
+  total_days: number;
 }
 
 export function useNetWorthHistory(days = 30) {

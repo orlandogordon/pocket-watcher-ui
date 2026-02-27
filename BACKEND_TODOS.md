@@ -200,3 +200,58 @@
   but does not reverse the balance change on the linked account.
 - No frontend changes needed — the form already supports omitting these fields (collapsed
   under "Advanced") so the backend can auto-calculate on both create and update.
+
+### Holdings should not be independently creatable — must derive from transactions
+- `POST /investments/accounts/{uuid}/holdings/` allows creating holdings with arbitrary
+  quantity and cost basis without any corresponding BUY transaction. This causes the holdings
+  table to diverge from the transaction history, which means:
+  1. `recalculate_account_snapshots` (transaction replay) produces incorrect balances because
+     it only sees shares from transactions, not from directly-created holdings.
+  2. No audit trail exists for how the shares were acquired.
+  3. Portfolio P&L calculations may be inconsistent between the two data sources.
+- **Preferred approach:** Remove `POST /investments/accounts/{uuid}/holdings/` and
+  `PUT /investments/accounts/{uuid}/holdings/{uuid}` entirely. Holdings become a derived
+  view — the system reconstructs current holdings by replaying all investment transactions
+  (BUY, SELL, SPLIT, REINVESTMENT). The holdings table becomes a materialized cache that is
+  rebuilt from transactions, similar to how `recalculate_account_snapshots` already works via
+  `get_account_state_on_date`.
+- **Alternative approach:** Keep the endpoints but auto-create a corresponding BUY transaction
+  whenever a holding is created or its quantity is increased via PUT. This preserves the
+  convenience of direct entry while maintaining the transaction log as the source of truth.
+- **Frontend note:** Once the preferred approach is implemented, remove `useCreateHolding` and
+  `useUpdateHolding` from `useInvestments.ts`, remove `HoldingFormDialog.tsx`, and remove the
+  "Add Holding" / "Edit" UI from `InvestmentDetailPage.tsx`. Users would add holdings by
+  creating BUY transactions instead.
+
+### `AccountSnapshotResponse` missing investment and review fields
+- The `AccountValueHistoryDB` table has `securities_value`, `cash_balance`, and `needs_review`
+  columns, but the `AccountSnapshotResponse` Pydantic model (`models/account_history.py`) does
+  not include them. The `AccountValueHistoryResponse` returns a list of `AccountSnapshotResponse`,
+  so these fields are silently dropped from the API response.
+- **Requirement:** Add three fields to `AccountSnapshotResponse`:
+  - `securities_value: Optional[Decimal]` — market value of holdings (investment accounts)
+  - `cash_balance: Optional[Decimal]` — cash in account (investment accounts)
+  - `needs_review: bool` — whether the snapshot has missing/suspect data (defaults `False`)
+- **Frontend note:** `AccountHistoryCard.tsx` is already wired to render a stacked area chart
+  (securities + cash) for investment accounts and a `needs_review` warning banner. These will
+  work once the fields appear in the response.
+
+### Account history — transaction replay for non-investment accounts
+- `create_account_snapshot` for non-investment accounts (checking, savings, credit card) simply
+  records the account's **current** balance as the snapshot value, regardless of `snapshot_date`.
+  This means backfilling historical dates (e.g. `snapshot_date=2025-12-01`) stamps today's
+  balance onto that past date — producing flat, inaccurate historical charts.
+- Investment accounts already have proper historical replay via `recalculate_account_snapshots`,
+  which replays `InvestmentTransactionDB` records to reconstruct holdings on each date and
+  fetches historical prices.
+- **Requirement:** Implement a similar transaction-replay approach for non-investment accounts:
+  1. Start from the account's current balance.
+  2. Query all transactions (`TransactionDB`) for the account ordered by date descending.
+  3. Walk backwards from today, subtracting each transaction's effect to derive what the balance
+     was on each prior date.
+  4. Create/update snapshots for each date in the requested range.
+- This would make the `/account-history/snapshots/all` backfill produce accurate historical
+  data for all account types, not just investments.
+- **Note:** The existing `POST /accounts/{uuid}/snapshots/recalculate` endpoint currently
+  rejects non-investment accounts with a 400. Once replay is implemented for other types,
+  this restriction can be lifted (or a separate endpoint added).
