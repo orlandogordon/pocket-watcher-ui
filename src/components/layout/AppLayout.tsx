@@ -12,6 +12,7 @@ import {
   LineChart,
   Tag,
   FolderOpen,
+  Settings,
 } from 'lucide-react';
 
 const primaryNav = [
@@ -29,6 +30,7 @@ const primaryNav = [
 const utilityNav = [
   { to: '/categories', label: 'Categories', icon: FolderOpen },
   { to: '/tags', label: 'Tags', icon: Tag },
+  { to: '/admin', label: 'Admin', icon: Settings },
 ];
 
 function NavItem({

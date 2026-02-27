@@ -30,6 +30,17 @@
 
 ## Data Model / API
 
+### `GET /transactions/` and `GET /transactions/{uuid}` — tags not embedded in response
+- The FRONTEND_GUIDE.md specifies `tags: TagResponse[]` on `TransactionResponse`, but the
+  API does not include tags in transaction list or detail responses.
+- There is also no `GET /transactions/{uuid}/tags` endpoint to fetch tags per transaction.
+- The frontend is fully wired: tag pills in the transaction table and `ManageTagsDialog`
+  current-tags display will work immediately once `tags: TagResponse[]` is included in the
+  transaction response.
+- **Requirement:** Embed the `tags` array (via the transaction-tag join table) in both
+  `GET /transactions/` (each item) and `GET /transactions/{uuid}`. The tag objects should
+  match `TagResponse` shape: `{ id, tag_id, tag_name, color }`.
+
 ### `institution_name` on `TransactionResponse` — likely redundant
 - `Transaction` has its own `institution_name` field, but every transaction already belongs
   to an `Account` which has `institution_name`.
@@ -235,6 +246,48 @@
 - **Frontend note:** `AccountHistoryCard.tsx` is already wired to render a stacked area chart
   (securities + cash) for investment accounts and a `needs_review` warning banner. These will
   work once the fields appear in the response.
+
+### `AccountSnapshotResponse` — missing `snapshot_id` and `review_reason` fields
+- The `AccountValueHistoryDB` table has `snapshot_id` (primary key), `needs_review`, and
+  `review_reason` columns, but the `AccountSnapshotResponse` Pydantic model only exposes
+  `needs_review` is missing (noted above), and `snapshot_id` and `review_reason` are also absent.
+- **Requirement:** Add to `AccountSnapshotResponse`:
+  - `snapshot_id: int` — the DB primary key, useful for identifying specific snapshots in the UI
+  - `review_reason: Optional[str]` — e.g. `"Missing price data for: AAPL, VTI"`, so the admin
+    UI can show exactly which symbols caused the needs-review flag
+- **Frontend note:** Once available, the Admin page Needs Review table will display `snapshot_id`
+  as an ID column and `review_reason` instead of the generic "Source" column.
+
+### Snapshot source field — improve granularity
+- The `snapshot_source` field currently has two values: `MANUAL` (from `/snapshots/all`) and
+  `BACKFILL` (from `/snapshots/recalculate`). These describe which endpoint was called, not
+  how the data was obtained.
+- **Recommendation:** Consider splitting into two fields or expanding the vocabulary:
+  - **Data source** (where the values came from):
+    - `PRICE_SERVICE` — populated from a market data feed (e.g., Yahoo Finance)
+    - `STATEMENT_IMPORT` — derived from an uploaded bank/brokerage statement
+    - `USER_ENTRY` — manually entered by the user
+    - `TRANSACTION_REPLAY` — computed by replaying transaction history
+  - **Trigger** (what initiated the snapshot):
+    - `MANUAL` — user clicked "Snapshot All" in the admin UI
+    - `BACKFILL` — user triggered recalculation for a date range
+    - `SCHEDULED` — created by an automated cron/scheduled job
+- This would let the UI distinguish between e.g. a snapshot that used real market prices vs one
+  that fell back to cost basis, regardless of whether it was triggered manually or by a schedule.
+
+### Needs-review snapshots — add dismiss/acknowledge endpoint
+- There is currently no way to clear the `needs_review` flag on a snapshot without re-running
+  recalculation. If price data will never be available (e.g., delisted stock, private fund),
+  the snapshot stays in needs-review indefinitely.
+- **Requirement:** Add an endpoint to dismiss/acknowledge reviewed snapshots:
+  ```
+  POST /accounts/{uuid}/snapshots/dismiss-review
+  Body: { "snapshot_ids": [1, 2, 3] }   (or use value_dates)
+  ```
+  Sets `needs_review = False` and optionally clears `review_reason` (or appends
+  "Dismissed by user" to preserve the original reason).
+- **Frontend note:** Once available, add a "Dismiss" button per row or a bulk "Dismiss All"
+  button in the Admin page Needs Review section.
 
 ### Account history — transaction replay for non-investment accounts
 - `create_account_snapshot` for non-investment accounts (checking, savings, credit card) simply
