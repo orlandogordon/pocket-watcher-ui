@@ -78,6 +78,25 @@ export function useDeleteFinancialPlan() {
   });
 }
 
+export function useBulkCreateMonths() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ planUuid, data }: {
+      planUuid: string;
+      data: FinancialPlanMonthCreate[];
+    }) =>
+      apiFetch<FinancialPlanMonthResponse[]>(
+        `/financial_plans/${planUuid}/months/bulk`,
+        { method: 'POST', body: JSON.stringify({ months: data }) },
+      ),
+    onSuccess: (_data, { planUuid }) => {
+      qc.invalidateQueries({ queryKey: planKeys.detail(planUuid) });
+      qc.invalidateQueries({ queryKey: planKeys.summary(planUuid) });
+      qc.invalidateQueries({ queryKey: planKeys.all });
+    },
+  });
+}
+
 export function useCreatePlanMonth() {
   const qc = useQueryClient();
   return useMutation({

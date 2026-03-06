@@ -4,6 +4,7 @@ import {
   useSnapshotJobs,
   useNeedsReview,
   useRecalculateSnapshots,
+  useDismissSnapshotReview,
   useSnapshotAll,
   type SnapshotJob,
 } from '@/hooks/useAdmin';
@@ -19,6 +20,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import {
   Table,
   TableBody,
@@ -224,6 +235,51 @@ function RecentJobsSection({ investmentAccounts }: { investmentAccounts: Account
 
 // --- Needs Review Section ---
 
+function DismissDialog({
+  open,
+  onOpenChange,
+  onConfirm,
+  isPending,
+  label,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onConfirm: (reason: string) => void;
+  isPending: boolean;
+  label: string;
+}) {
+  const [reason, setReason] = useState('');
+
+  return (
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Dismiss Snapshot</AlertDialogTitle>
+          <AlertDialogDescription>{label}</AlertDialogDescription>
+        </AlertDialogHeader>
+        <Input
+          placeholder="Reason (optional)"
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          className="text-sm"
+        />
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={isPending}>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            disabled={isPending}
+            onClick={() => {
+              onConfirm(reason);
+              setReason('');
+            }}
+          >
+            {isPending ? 'Dismissing...' : 'Dismiss'}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
 function NeedsReviewAccount({
   account,
 }: {
@@ -231,6 +287,8 @@ function NeedsReviewAccount({
 }) {
   const { data: snapshots, isLoading } = useNeedsReview(account.uuid);
   const recalculate = useRecalculateSnapshots();
+  const dismiss = useDismissSnapshotReview();
+  const [dismissTarget, setDismissTarget] = useState<string[] | null>(null);
 
   const handleRecalculate = () => {
     if (!snapshots?.length) return;
@@ -240,6 +298,18 @@ function NeedsReviewAccount({
       startDate: dates[0],
       endDate: dates[dates.length - 1],
     });
+  };
+
+  const handleDismissConfirm = (reason: string) => {
+    if (!dismissTarget) return;
+    dismiss.mutate(
+      {
+        accountUuid: account.uuid,
+        snapshotUuids: dismissTarget,
+        reason: reason || undefined,
+      },
+      { onSuccess: () => setDismissTarget(null) },
+    );
   };
 
   if (isLoading) return null;
@@ -253,6 +323,10 @@ function NeedsReviewAccount({
     );
   }
 
+  const dismissLabel = dismissTarget?.length === 1
+    ? `Dismiss snapshot for ${snapshots.find((s) => s.snapshot_uuid === dismissTarget[0])?.value_date ?? 'this date'}?`
+    : `Dismiss all ${snapshots.length} flagged snapshots for ${account.account_name}?`;
+
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
@@ -263,15 +337,26 @@ function NeedsReviewAccount({
             {snapshots.length} to review
           </Badge>
         </div>
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={handleRecalculate}
-          disabled={recalculate.isPending}
-        >
-          <RefreshCw className="mr-1 h-3 w-3" />
-          Recalculate Range
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setDismissTarget(snapshots.map((s) => s.snapshot_uuid))}
+            disabled={dismiss.isPending}
+          >
+            <CheckCircle className="mr-1 h-3 w-3" />
+            Dismiss All
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleRecalculate}
+            disabled={recalculate.isPending}
+          >
+            <RefreshCw className="mr-1 h-3 w-3" />
+            Recalculate Range
+          </Button>
+        </div>
       </div>
       <Table>
         <TableHeader>
@@ -279,18 +364,39 @@ function NeedsReviewAccount({
             <TableHead>Date</TableHead>
             <TableHead className="text-right">Balance</TableHead>
             <TableHead>Source</TableHead>
+            <TableHead>Reason</TableHead>
+            <TableHead className="w-20" />
           </TableRow>
         </TableHeader>
         <TableBody>
           {snapshots.map((s) => (
-            <TableRow key={s.value_date}>
+            <TableRow key={s.snapshot_uuid}>
               <TableCell className="text-sm">{s.value_date}</TableCell>
               <TableCell className="text-right text-sm">{formatCurrency(parseFloat(s.balance))}</TableCell>
               <TableCell className="text-sm text-muted-foreground">{s.snapshot_source}</TableCell>
+              <TableCell className="text-sm text-muted-foreground">{s.review_reason}</TableCell>
+              <TableCell>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 text-xs"
+                  onClick={() => setDismissTarget([s.snapshot_uuid])}
+                  disabled={dismiss.isPending}
+                >
+                  Dismiss
+                </Button>
+              </TableCell>
             </TableRow>
           ))}
         </TableBody>
       </Table>
+      <DismissDialog
+        open={dismissTarget !== null}
+        onOpenChange={(open) => { if (!open) setDismissTarget(null); }}
+        onConfirm={handleDismissConfirm}
+        isPending={dismiss.isPending}
+        label={dismissLabel}
+      />
       {recalculate.isSuccess && (
         <p className="text-xs text-green-600">Recalculation job #{recalculate.data.job_id} started</p>
       )}

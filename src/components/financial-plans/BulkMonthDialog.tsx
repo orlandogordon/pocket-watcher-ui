@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -27,7 +27,8 @@ import {
 } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { useCreatePlanMonth } from '@/hooks/useFinancialPlans';
+import { useBulkCreateMonths } from '@/hooks/useFinancialPlans';
+import type { FinancialPlanMonthCreate } from '@/types/financial-plans';
 import { useCategories, buildCategoryMap, getCategoryLabel } from '@/hooks/useCategories';
 
 const MONTH_NAMES = [
@@ -72,9 +73,7 @@ interface BulkMonthDialogProps {
 }
 
 export function BulkMonthDialog({ open, onOpenChange, planUuid }: BulkMonthDialogProps) {
-  const [submitError, setSubmitError] = useState<string | null>(null);
-  const [progress, setProgress] = useState<{ current: number; total: number } | null>(null);
-  const createMonth = useCreatePlanMonth();
+  const bulkCreate = useBulkCreateMonths();
 
   const { data: categories } = useCategories();
   const categoryMap = buildCategoryMap(categories ?? []);
@@ -102,8 +101,7 @@ export function BulkMonthDialog({ open, onOpenChange, planUuid }: BulkMonthDialo
 
   useEffect(() => {
     if (open) {
-      setSubmitError(null);
-      setProgress(null);
+      bulkCreate.reset();
       form.reset({
         start_year: new Date().getFullYear().toString(),
         start_month: '',
@@ -114,8 +112,7 @@ export function BulkMonthDialog({ open, onOpenChange, planUuid }: BulkMonthDialo
     }
   }, [open, form]);
 
-  async function onSubmit(values: FormValues) {
-    setSubmitError(null);
+  function onSubmit(values: FormValues) {
     const startYear = parseInt(values.start_year);
     const startMonth = parseInt(values.start_month);
     const count = parseInt(values.count);
@@ -127,43 +124,27 @@ export function BulkMonthDialog({ open, onOpenChange, planUuid }: BulkMonthDialo
       category_uuid: e.category_uuid,
     }));
 
-    setProgress({ current: 0, total: count });
-
+    const months: FinancialPlanMonthCreate[] = [];
     let y = startYear;
     let m = startMonth;
-
     for (let i = 0; i < count; i++) {
-      try {
-        await createMonth.mutateAsync({
-          planUuid,
-          data: {
-            year: y,
-            month: m,
-            planned_income: values.planned_income,
-            expenses: expenseTemplates.length > 0 ? expenseTemplates : undefined,
-          },
-        });
-        setProgress({ current: i + 1, total: count });
-      } catch (err) {
-        setSubmitError(
-          `Failed on ${MONTH_NAMES[m]} ${y}: ${err instanceof Error ? err.message : 'Unknown error'}`,
-        );
-        setProgress(null);
-        return;
-      }
-
+      months.push({
+        year: y,
+        month: m,
+        planned_income: values.planned_income,
+        expenses: expenseTemplates.length > 0 ? expenseTemplates : undefined,
+      });
       m++;
-      if (m > 12) {
-        m = 1;
-        y++;
-      }
+      if (m > 12) { m = 1; y++; }
     }
 
-    setProgress(null);
-    onOpenChange(false);
+    bulkCreate.mutate(
+      { planUuid, data: months },
+      { onSuccess: () => onOpenChange(false) },
+    );
   }
 
-  const isPending = progress !== null;
+  const isPending = bulkCreate.isPending;
 
   return (
     <Dialog open={open} onOpenChange={isPending ? undefined : onOpenChange}>
@@ -369,21 +350,9 @@ export function BulkMonthDialog({ open, onOpenChange, planUuid }: BulkMonthDialo
               </div>
             </div>
 
-            {progress && (
-              <div className="space-y-1">
-                <div className="h-2 rounded-full bg-muted overflow-hidden">
-                  <div
-                    className="h-full rounded-full bg-primary transition-all"
-                    style={{ width: `${(progress.current / progress.total) * 100}%` }}
-                  />
-                </div>
-                <p className="text-xs text-muted-foreground text-center">
-                  Creating month {progress.current} of {progress.total}...
-                </p>
-              </div>
+            {bulkCreate.isError && (
+              <p className="text-sm text-destructive">{bulkCreate.error.message}</p>
             )}
-
-            {submitError && <p className="text-sm text-destructive">{submitError}</p>}
 
             <DialogFooter>
               <Button

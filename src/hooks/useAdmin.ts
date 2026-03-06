@@ -35,6 +35,7 @@ export interface SnapshotAllResponse {
 }
 
 export interface NeedsReviewSnapshot {
+  snapshot_uuid: string;
   account_uuid: string;
   value_date: string;
   balance: string;
@@ -43,6 +44,8 @@ export interface NeedsReviewSnapshot {
   realized_gain_loss: string | null;
   principal_paid_ytd: string | null;
   interest_paid_ytd: string | null;
+  needs_review: boolean;
+  review_reason: string | null;
   snapshot_source: string;
   created_at: string;
 }
@@ -96,6 +99,36 @@ export function useRecalculateSnapshots() {
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: adminKeys.jobs(variables.accountUuid) });
       queryClient.invalidateQueries({ queryKey: adminKeys.needsReview(variables.accountUuid) });
+    },
+  });
+}
+
+export function useDismissSnapshotReview() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      accountUuid,
+      snapshotUuids,
+      reason,
+    }: {
+      accountUuid: string;
+      snapshotUuids: string[];
+      reason?: string;
+    }) =>
+      apiFetch<{ dismissed_count: number }>(
+        `/account-history/accounts/${accountUuid}/snapshots/dismiss-review`,
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            snapshot_uuids: snapshotUuids,
+            reason: reason ?? 'Dismissed by user',
+          }),
+        },
+      ),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: adminKeys.needsReview(variables.accountUuid),
+      });
     },
   });
 }
