@@ -5,6 +5,9 @@ export type InvestmentTransactionType =
   | 'INTEREST'
   | 'FEE'
   | 'TRANSFER'
+  | 'SPLIT'
+  | 'MERGER'
+  | 'SPINOFF'
   | 'REINVESTMENT'
   | 'OTHER';
 
@@ -18,14 +21,6 @@ export interface InvestmentHoldingResponse {
   api_symbol: string | null;
   security_type: string | null;
   created_at: string;
-}
-
-export interface InvestmentHoldingCreate {
-  account_uuid: string;
-  symbol: string;
-  quantity: string;
-  average_cost_basis: string;
-  security_type?: string;
 }
 
 export interface InvestmentTransactionResponse {

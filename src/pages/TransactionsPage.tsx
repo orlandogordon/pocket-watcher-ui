@@ -40,6 +40,8 @@ const TRANSACTION_TYPES = [
   'TRANSFER',
 ] as const;
 
+const EXPENSE_TYPES = new Set(['PURCHASE', 'WITHDRAWAL', 'FEE']);
+
 const LIMIT = 50;
 
 const EMPTY_FILTERS: TransactionFilters = {
@@ -338,8 +340,7 @@ export function TransactionsPage() {
             </TableHeader>
             <TableBody>
               {transactions.map((tx) => {
-                const amount = parseFloat(tx.amount);
-                const isNegative = amount < 0;
+                const isExpense = EXPENSE_TYPES.has(tx.transaction_type);
                 return (
                   <TableRow key={tx.id}>
                     <TableCell className="whitespace-nowrap text-sm">
@@ -376,10 +377,10 @@ export function TransactionsPage() {
                     </TableCell>
                     <TableCell
                       className={`text-right font-medium tabular-nums ${
-                        isNegative ? 'text-red-500' : 'text-green-600'
+                        isExpense ? 'text-red-500' : 'text-green-600'
                       }`}
                     >
-                      {formatCurrency(tx.amount)}
+                      {isExpense ? `−${formatCurrency(tx.amount)}` : formatCurrency(tx.amount)}
                     </TableCell>
                     <TableCell>
                       <Badge variant="secondary">{tx.transaction_type}</Badge>

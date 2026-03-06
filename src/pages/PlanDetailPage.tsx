@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback, type KeyboardEvent } from 'react';
+import React, { useState, useCallback, type KeyboardEvent } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -21,7 +21,6 @@ import {
   useDeletePlanMonth,
   useUpdatePlanMonth,
   useUpdatePlanExpense,
-  syncPlanDates,
 } from '@/hooks/useFinancialPlans';
 import { useCategories, buildCategoryMap, getCategoryLabel } from '@/hooks/useCategories';
 import { PlanFormDialog } from '@/components/financial-plans/PlanFormDialog';
@@ -121,17 +120,6 @@ export function PlanDetailPage() {
   const deleteMonth = useDeletePlanMonth();
   const updateMonth = useUpdatePlanMonth();
   const updateExpense = useUpdatePlanExpense();
-
-  // Auto-sync plan start_date/end_date when months change
-  const prevMonthCountRef = useRef<number | null>(null);
-  useEffect(() => {
-    if (!plan || !uuid) return;
-    const count = plan.monthly_periods.length;
-    if (prevMonthCountRef.current !== null && prevMonthCountRef.current !== count) {
-      syncPlanDates(uuid, plan.monthly_periods);
-    }
-    prevMonthCountRef.current = count;
-  }, [plan, uuid]);
 
   // Expand/collapse state
   const [expandedMonths, setExpandedMonths] = useState<Set<string>>(new Set());

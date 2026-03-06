@@ -28,11 +28,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { HoldingFormDialog } from '@/components/investments/HoldingFormDialog';
-import { DeleteHoldingDialog } from '@/components/investments/DeleteHoldingDialog';
 import { InvestmentTransactionFormDialog } from '@/components/investments/InvestmentTransactionFormDialog';
 import { DeleteInvestmentTransactionDialog } from '@/components/investments/DeleteInvestmentTransactionDialog';
-import type { InvestmentHoldingResponse, InvestmentTransactionResponse, InvestmentTransactionType } from '@/types/investments';
+import type { InvestmentTransactionResponse, InvestmentTransactionType } from '@/types/investments';
 
 const TX_TYPE_COLORS: Record<InvestmentTransactionType, string> = {
   BUY: 'bg-blue-100 text-blue-800',
@@ -41,6 +39,9 @@ const TX_TYPE_COLORS: Record<InvestmentTransactionType, string> = {
   INTEREST: 'bg-indigo-100 text-indigo-800',
   FEE: 'bg-red-100 text-red-800',
   TRANSFER: 'bg-yellow-100 text-yellow-800',
+  SPLIT: 'bg-amber-100 text-amber-800',
+  MERGER: 'bg-teal-100 text-teal-800',
+  SPINOFF: 'bg-pink-100 text-pink-800',
   REINVESTMENT: 'bg-cyan-100 text-cyan-800',
   OTHER: 'bg-gray-100 text-gray-800',
 };
@@ -51,11 +52,6 @@ export function InvestmentDetailPage() {
   const account = accounts?.find((a) => a.uuid === accountUuid);
   const { data: holdings, isLoading: holdingsLoading } = useInvestmentHoldings(accountUuid ?? '');
   const { data: transactions, isLoading: txLoading } = useInvestmentTransactions(accountUuid ?? '');
-
-  // Holding dialogs
-  const [holdingFormOpen, setHoldingFormOpen] = useState(false);
-  const [editHolding, setEditHolding] = useState<InvestmentHoldingResponse | undefined>();
-  const [deleteHolding, setDeleteHolding] = useState<InvestmentHoldingResponse | null>(null);
 
   // Transaction dialogs
   const [txFormOpen, setTxFormOpen] = useState(false);
@@ -139,16 +135,6 @@ export function InvestmentDetailPage() {
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-base font-semibold">Holdings</h2>
-          <Button
-            size="sm"
-            onClick={() => {
-              setEditHolding(undefined);
-              setHoldingFormOpen(true);
-            }}
-          >
-            <Plus className="mr-1 h-4 w-4" />
-            Add Holding
-          </Button>
         </div>
 
         {holdingsLoading ? (
@@ -167,7 +153,6 @@ export function InvestmentDetailPage() {
                   <TableHead className="text-right">Market Value</TableHead>
                   <TableHead className="text-right">P&L</TableHead>
                   <TableHead className="text-right">% Gain</TableHead>
-                  <TableHead className="w-[80px]" />
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -218,29 +203,6 @@ export function InvestmentDetailPage() {
                           ? `${pctGain >= 0 ? '+' : ''}${pctGain.toFixed(2)}%`
                           : '—'}
                       </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="h-7 w-7"
-                            onClick={() => {
-                              setEditHolding(h);
-                              setHoldingFormOpen(true);
-                            }}
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="h-7 w-7 text-destructive hover:text-destructive"
-                            onClick={() => setDeleteHolding(h)}
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                      </TableCell>
                     </TableRow>
                   );
                 })}
@@ -285,7 +247,6 @@ export function InvestmentDetailPage() {
                         {totalPct >= 0 ? '+' : ''}
                         {totalPct.toFixed(2)}%
                       </TableCell>
-                      <TableCell />
                     </TableRow>
                   </TableFooter>
                 );
@@ -322,7 +283,7 @@ export function InvestmentDetailPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Types</SelectItem>
-                  {(['BUY', 'SELL', 'DIVIDEND', 'INTEREST', 'FEE', 'TRANSFER', 'REINVESTMENT', 'OTHER'] as const).map(
+                  {(['BUY', 'SELL', 'DIVIDEND', 'INTEREST', 'FEE', 'TRANSFER', 'SPLIT', 'MERGER', 'SPINOFF', 'REINVESTMENT', 'OTHER'] as const).map(
                     (t) => (
                       <SelectItem key={t} value={t}>
                         {t}
@@ -513,17 +474,6 @@ export function InvestmentDetailPage() {
       </div>
 
       {/* Dialogs */}
-      <HoldingFormDialog
-        open={holdingFormOpen}
-        onOpenChange={setHoldingFormOpen}
-        accountUuid={accountUuid}
-        holding={editHolding}
-      />
-      <DeleteHoldingDialog
-        open={!!deleteHolding}
-        onOpenChange={(open) => { if (!open) setDeleteHolding(null); }}
-        holding={deleteHolding}
-      />
       <InvestmentTransactionFormDialog
         open={txFormOpen}
         onOpenChange={setTxFormOpen}

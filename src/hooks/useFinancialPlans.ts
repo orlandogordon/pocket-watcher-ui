@@ -18,27 +18,6 @@ const planKeys = {
   summary: (uuid: string) => ['financial-plans', uuid, 'summary'] as const,
 };
 
-/**
- * Compute start_date / end_date from months and update the plan
- * so the API-stored range always matches the actual months.
- */
-export async function syncPlanDates(planUuid: string, months: FinancialPlanMonthResponse[]) {
-  if (months.length === 0) return;
-  const sorted = [...months].sort((a, b) =>
-    a.year !== b.year ? a.year - b.year : a.month - b.month,
-  );
-  const first = sorted[0];
-  const last = sorted[sorted.length - 1];
-  const startDate = `${first.year}-${String(first.month).padStart(2, '0')}-01`;
-  // Last day of the last month
-  const lastDay = new Date(last.year, last.month, 0).getDate();
-  const endDate = `${last.year}-${String(last.month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
-  await apiFetch(`/financial_plans/${planUuid}`, {
-    method: 'PUT',
-    body: JSON.stringify({ start_date: startDate, end_date: endDate }),
-  });
-}
-
 export function useFinancialPlans() {
   return useQuery({
     queryKey: planKeys.all,

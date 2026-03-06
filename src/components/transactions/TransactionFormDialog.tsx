@@ -173,7 +173,7 @@ export function TransactionFormDialog({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Account</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value} disabled={isEdit}>
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select account" />
@@ -187,9 +187,6 @@ export function TransactionFormDialog({
                         ))}
                       </SelectContent>
                     </Select>
-                    {isEdit && (
-                      <p className="text-xs text-muted-foreground">Account cannot be changed after creation.</p>
-                    )}
                     <FormMessage />
                   </FormItem>
                 )}
