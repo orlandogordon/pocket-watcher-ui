@@ -1,10 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { CheckCircle2, History, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { UploadForm } from '@/components/uploads/UploadForm';
 import { PreviewSession } from '@/components/uploads/PreviewSession';
-import type { ConfirmResponse, PreviewResponse } from '@/types/uploads';
+import { usePreviewSessions } from '@/hooks/useStatementUpload';
+import { INSTITUTION_LABELS } from '@/types/uploads';
+import type { ConfirmResponse, PreviewResponse, Institution, PreviewSessionInfo } from '@/types/uploads';
 
 type Step =
   | { kind: 'form' }
@@ -51,6 +54,65 @@ function SuccessBanner({
   );
 }
 
+function TimeRemaining({ expiresAt }: { expiresAt: string }) {
+  const [now, setNow] = useState(Date.now());
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(id);
+  }, []);
+
+  const ms = new Date(expiresAt).getTime() - now;
+  if (ms <= 0) return <span className="text-xs text-destructive">Expired</span>;
+
+  const mins = Math.floor(ms / 60_000);
+  const label = mins >= 60 ? `${Math.floor(mins / 60)}h ${mins % 60}m` : `${mins}m`;
+  return <span className="text-xs text-muted-foreground">{label} left</span>;
+}
+
+function ActiveSessions({ onResume }: { onResume: (sessionId: string) => void }) {
+  const { data: sessions, isLoading } = usePreviewSessions();
+
+  if (isLoading || !sessions?.length) return null;
+
+  return (
+    <Card className="mb-6">
+      <CardHeader>
+        <CardTitle className="text-base">Active Sessions</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-2">
+          {sessions.map((s) => (
+            <div
+              key={s.preview_session_id}
+              className="flex items-center justify-between rounded-md border p-3"
+            >
+              <div>
+                <p className="text-sm font-medium">{s.filename}</p>
+                <p className="text-xs text-muted-foreground">
+                  {INSTITUTION_LABELS[s.institution as Institution] ?? s.institution} · Created{' '}
+                  {new Date(s.created_at).toLocaleString()}
+                </p>
+                {s.summary && (
+                  <p className="text-xs text-muted-foreground">
+                    {s.summary.ready_to_import} ready · {s.summary.pending_review} pending
+                  </p>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <TimeRemaining expiresAt={s.expires_at} />
+                <Button size="sm" onClick={() => onResume(s.preview_session_id)}>
+                  Resume
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export function UploadsPage() {
   const [step, setStep] = useState<Step>({ kind: 'form' });
 
@@ -69,7 +131,10 @@ export function UploadsPage() {
   return (
     <div className="p-6">
       {step.kind === 'form' && (
-        <UploadForm onPreviewReady={handlePreviewReady} />
+        <>
+          <ActiveSessions onResume={(id) => setStep({ kind: 'preview', sessionId: id })} />
+          <UploadForm onPreviewReady={handlePreviewReady} />
+        </>
       )}
 
       {step.kind === 'preview' && (

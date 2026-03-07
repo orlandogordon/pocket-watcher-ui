@@ -6,6 +6,8 @@ import {
   usePreviewSession,
   useReviewDuplicate,
   useRejectUniqueItem,
+  useBulkReviewDuplicate,
+  useBulkRejectItem,
   useEditPreviewTransaction,
   useConfirmUpload,
   useCancelSession,
@@ -13,7 +15,7 @@ import {
 } from '@/hooks/useStatementUpload';
 import { PendingReviewTable } from './PendingReviewTable';
 import { ReadyToImportTable } from './ReadyToImportTable';
-import type { ConfirmResponse, DuplicateAction } from '@/types/uploads';
+import type { ConfirmResponse, DuplicateAction, BulkDuplicateReviewItem } from '@/types/uploads';
 import type { RowEdits } from './PendingReviewTable';
 
 interface PreviewSessionProps {
@@ -28,6 +30,8 @@ export function PreviewSession({ sessionId, onCancel, onConfirmed }: PreviewSess
   const { data: preview, isLoading, error } = usePreviewSession(sessionId);
   const reviewDuplicate = useReviewDuplicate(sessionId);
   const rejectUniqueItem = useRejectUniqueItem(sessionId);
+  const bulkReviewDuplicate = useBulkReviewDuplicate(sessionId);
+  const bulkRejectItem = useBulkRejectItem(sessionId);
   const editTransaction = useEditPreviewTransaction(sessionId);
   const confirmUpload = useConfirmUpload();
   const cancelSession = useCancelSession();
@@ -58,6 +62,14 @@ export function PreviewSession({ sessionId, onCancel, onConfirmed }: PreviewSess
     } finally {
       setPendingTempId(null);
     }
+  }
+
+  function handleBulkReview(items: BulkDuplicateReviewItem[]) {
+    bulkReviewDuplicate.mutate(items);
+  }
+
+  function handleBulkMoveToReview(tempIds: string[]) {
+    bulkRejectItem.mutate(tempIds);
   }
 
   function handleMoveToReview(tempId: string) {
@@ -198,7 +210,8 @@ export function PreviewSession({ sessionId, onCancel, onConfirmed }: PreviewSess
         <PendingReviewTable
           items={allPending}
           onReview={handleReview}
-          isPending={reviewDuplicate.isPending || editTransaction.isPending}
+          onBulkReview={handleBulkReview}
+          isPending={reviewDuplicate.isPending || bulkReviewDuplicate.isPending || editTransaction.isPending}
           pendingTempId={pendingTempId}
         />
       </div>
@@ -211,7 +224,8 @@ export function PreviewSession({ sessionId, onCancel, onConfirmed }: PreviewSess
         <ReadyToImportTable
           items={allReady}
           onMoveToReview={handleMoveToReview}
-          isPending={reviewDuplicate.isPending || rejectUniqueItem.isPending}
+          onBulkMoveToReview={handleBulkMoveToReview}
+          isPending={reviewDuplicate.isPending || rejectUniqueItem.isPending || bulkRejectItem.isPending}
           pendingTempId={pendingTempId}
         />
       </div>

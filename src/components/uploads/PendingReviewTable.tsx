@@ -53,6 +53,7 @@ export interface RowEdits {
 interface PendingReviewTableProps {
   items: PreviewItem[];
   onReview: (tempId: string, action: DuplicateAction, edits?: RowEdits) => void;
+  onBulkReview: (items: { temp_id: string; action: DuplicateAction }[]) => void;
   isPending: boolean;
   pendingTempId: string | null;
 }
@@ -377,7 +378,7 @@ function RejectedRow({
   );
 }
 
-export function PendingReviewTable({ items, onReview, isPending, pendingTempId }: PendingReviewTableProps) {
+export function PendingReviewTable({ items, onReview, onBulkReview, isPending, pendingTempId }: PendingReviewTableProps) {
   const { data: categoriesData = [] } = useCategories();
   const categoryMap = buildCategoryMap(categoriesData);
   const { data: allTags = [] } = useTags();
@@ -415,9 +416,18 @@ export function PendingReviewTable({ items, onReview, isPending, pendingTempId }
   function toggleAllRejected() {
     setSelectedRejected(allRejectedSelected ? new Set() : new Set(rejectedItems.map((i) => i.temp_id)));
   }
-  function handleBulkApprove() { for (const id of selectedPending) onReview(id, 'approve'); setSelectedPending(new Set()); }
-  function handleBulkReject() { for (const id of selectedPending) onReview(id, 'reject'); setSelectedPending(new Set()); }
-  function handleBulkRestore() { for (const id of selectedRejected) onReview(id, 'undo_reject'); setSelectedRejected(new Set()); }
+  function handleBulkApprove() {
+    onBulkReview([...selectedPending].map((id) => ({ temp_id: id, action: 'approve' as const })));
+    setSelectedPending(new Set());
+  }
+  function handleBulkReject() {
+    onBulkReview([...selectedPending].map((id) => ({ temp_id: id, action: 'reject' as const })));
+    setSelectedPending(new Set());
+  }
+  function handleBulkRestore() {
+    onBulkReview([...selectedRejected].map((id) => ({ temp_id: id, action: 'undo_reject' as const })));
+    setSelectedRejected(new Set());
+  }
 
   const pendingHeader = (
     <TableRow>

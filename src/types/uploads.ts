@@ -83,6 +83,25 @@ export interface PreviewResponse {
 
 export type DuplicateAction = 'approve' | 'reject' | 'undo_reject';
 
+export interface BulkDuplicateReviewItem {
+  temp_id: string;
+  action: DuplicateAction;
+}
+
+export interface BulkActionResponse extends PreviewResponse {
+  processed: number;
+  errors: Array<{ temp_id: string; error: string }>;
+}
+
+export interface PreviewSessionInfo {
+  preview_session_id: string;
+  institution: string;
+  filename: string;
+  created_at: string;
+  expires_at: string;
+  summary: PreviewSummary | null;
+}
+
 export interface ConfirmResponse {
   transactions_created: number;
   investment_transactions_created: number;

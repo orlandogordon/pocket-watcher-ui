@@ -4,16 +4,27 @@ import type {
   PreviewResponse,
   ConfirmResponse,
   DuplicateAction,
+  BulkDuplicateReviewItem,
+  BulkActionResponse,
+  PreviewSessionInfo,
   UploadJob,
   SkippedItem,
 } from '@/types/uploads';
 
 export const uploadKeys = {
+  sessions: () => ['uploads', 'sessions'] as const,
   preview: (id: string) => ['uploads', 'preview', id] as const,
   jobs: () => ['uploads', 'jobs'] as const,
   job: (id: number) => ['uploads', 'jobs', id] as const,
   jobSkipped: (id: number) => ['uploads', 'jobs', id, 'skipped'] as const,
 };
+
+export function usePreviewSessions() {
+  return useQuery({
+    queryKey: uploadKeys.sessions(),
+    queryFn: () => apiFetch<PreviewSessionInfo[]>('/uploads/preview/sessions'),
+  });
+}
 
 export function useUploadStatement() {
   return useMutation({
@@ -44,9 +55,13 @@ export function useExtendSession() {
 }
 
 export function useCancelSession() {
+  const qc = useQueryClient();
   return useMutation({
     mutationFn: (sessionId: string) =>
       apiFetch<void>(`/uploads/preview/${sessionId}`, { method: 'DELETE' }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: uploadKeys.sessions() });
+    },
   });
 }
 
@@ -106,6 +121,34 @@ export function useRejectUniqueItem(sessionId: string) {
   });
 }
 
+export function useBulkReviewDuplicate(sessionId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (items: BulkDuplicateReviewItem[]) =>
+      apiFetch<BulkActionResponse>(
+        `/uploads/preview/${sessionId}/bulk-review-duplicate`,
+        { method: 'POST', body: JSON.stringify({ items }) },
+      ),
+    onSuccess: (data) => {
+      qc.setQueryData(uploadKeys.preview(sessionId), data);
+    },
+  });
+}
+
+export function useBulkRejectItem(sessionId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (tempIds: string[]) =>
+      apiFetch<BulkActionResponse>(
+        `/uploads/preview/${sessionId}/bulk-reject-item`,
+        { method: 'POST', body: JSON.stringify({ temp_ids: tempIds }) },
+      ),
+    onSuccess: (data) => {
+      qc.setQueryData(uploadKeys.preview(sessionId), data);
+    },
+  });
+}
+
 export function useConfirmUpload() {
   const qc = useQueryClient();
   return useMutation({
@@ -115,6 +158,7 @@ export function useConfirmUpload() {
         body: JSON.stringify({ preview_session_id: sessionId }),
       }),
     onSuccess: () => {
+      qc.invalidateQueries({ queryKey: uploadKeys.sessions() });
       qc.invalidateQueries({ queryKey: uploadKeys.jobs() });
       qc.invalidateQueries({ queryKey: ['transactions'] });
     },

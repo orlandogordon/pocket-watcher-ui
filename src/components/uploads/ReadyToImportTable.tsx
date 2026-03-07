@@ -28,11 +28,12 @@ function effectiveStr(item: PreviewItem, field: keyof EditedData): string {
 interface ReadyToImportTableProps {
   items: PreviewItem[];
   onMoveToReview: (tempId: string) => void;
+  onBulkMoveToReview: (tempIds: string[]) => void;
   isPending: boolean;
   pendingTempId: string | null;
 }
 
-export function ReadyToImportTable({ items, onMoveToReview, isPending, pendingTempId }: ReadyToImportTableProps) {
+export function ReadyToImportTable({ items, onMoveToReview, onBulkMoveToReview, isPending, pendingTempId }: ReadyToImportTableProps) {
   const { data: categoriesData = [] } = useCategories();
   const categoryMap = buildCategoryMap(categoriesData);
   const { data: allTags = [] } = useTags();
@@ -56,7 +57,7 @@ export function ReadyToImportTable({ items, onMoveToReview, isPending, pendingTe
   }
 
   function handleBulkMoveToReview() {
-    for (const tempId of selected) onMoveToReview(tempId);
+    onBulkMoveToReview([...selected]);
     setSelected(new Set());
   }
 
