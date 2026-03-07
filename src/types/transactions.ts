@@ -93,6 +93,44 @@ export interface AmortizationCustom {
   allocations: Array<{ month: string; amount: string }>;
 }
 
+// --- Relationship types ---
+
+export type RelationshipType = 'REFUNDS' | 'OFFSETS' | 'SPLITS' | 'FEES_FOR' | 'REVERSES';
+
+export const ABSORBING_RELATIONSHIP_TYPES: Set<RelationshipType> =
+  new Set(['REFUNDS', 'OFFSETS', 'REVERSES']);
+
+export const RELATIONSHIP_TYPE_LABELS: Record<RelationshipType, string> = {
+  REFUNDS: 'Refunds',
+  OFFSETS: 'Offsets',
+  REVERSES: 'Reverses',
+  FEES_FOR: 'Fee for',
+  SPLITS: 'Split of',
+};
+
+export interface TransactionRelationshipResponse {
+  id: string;
+  from_transaction_uuid: string;
+  to_transaction_uuid: string;
+  relationship_type: RelationshipType;
+  amount_allocated: string | null;
+  notes: string | null;
+  created_at: string;
+}
+
+export interface TransactionRelationshipCreate {
+  to_transaction_uuid: string;
+  relationship_type: RelationshipType;
+  amount_allocated?: string;
+  notes?: string;
+}
+
+export interface TransactionRelationshipUpdate {
+  relationship_type?: RelationshipType;
+  amount_allocated?: string | null;
+  notes?: string | null;
+}
+
 export interface TransactionFilters {
   account_uuid?: string;
   category_uuid?: string[];

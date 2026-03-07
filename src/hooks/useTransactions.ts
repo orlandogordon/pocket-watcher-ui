@@ -9,6 +9,9 @@ import type {
   AmortizationScheduleResponse,
   AmortizationEqualSplit,
   AmortizationCustom,
+  TransactionRelationshipResponse,
+  TransactionRelationshipCreate,
+  TransactionRelationshipUpdate,
 } from '@/types/transactions';
 
 function buildQuery(filters: TransactionFilters): string {
@@ -153,5 +156,65 @@ export function useDeleteAmortization() {
     mutationFn: (uuid: string) =>
       apiFetch<void>(`/transactions/${uuid}/amortization`, { method: 'DELETE' }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['transactions'] }),
+  });
+}
+
+// --- Relationship hooks ---
+
+export function useTransactionRelationships(uuid: string | null) {
+  return useQuery({
+    queryKey: ['transactions', uuid, 'relationships'],
+    queryFn: () => apiFetch<TransactionRelationshipResponse[]>(
+      `/transactions/${uuid}/relationships`
+    ),
+    enabled: !!uuid,
+  });
+}
+
+export function useCreateRelationship() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ uuid, data }: {
+      uuid: string;
+      data: TransactionRelationshipCreate;
+    }) =>
+      apiFetch<TransactionRelationshipResponse>(
+        `/transactions/${uuid}/relationships`,
+        { method: 'POST', body: JSON.stringify(data) },
+      ),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['transactions'] });
+    },
+  });
+}
+
+export function useUpdateRelationship() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ relationshipUuid, data }: {
+      relationshipUuid: string;
+      data: TransactionRelationshipUpdate;
+    }) =>
+      apiFetch<TransactionRelationshipResponse>(
+        `/transactions/relationships/${relationshipUuid}`,
+        { method: 'PUT', body: JSON.stringify(data) },
+      ),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['transactions'] });
+    },
+  });
+}
+
+export function useDeleteRelationship() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (relationshipUuid: string) =>
+      apiFetch<void>(
+        `/transactions/relationships/${relationshipUuid}`,
+        { method: 'DELETE' },
+      ),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['transactions'] });
+    },
   });
 }

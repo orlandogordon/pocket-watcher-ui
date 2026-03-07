@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { format, parseISO } from 'date-fns';
-import { Plus, Pencil, Trash2, X, Tag, Scissors, CalendarRange } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, Tag, Scissors, CalendarRange, Link2, MoreHorizontal } from 'lucide-react';
 import { useTransactions, useTransactionStats } from '@/hooks/useTransactions';
 import { useAccounts } from '@/hooks/useAccounts';
 import { useCategories } from '@/hooks/useCategories';
@@ -11,6 +11,7 @@ import { DeleteTransactionDialog } from '@/components/transactions/DeleteTransac
 import { ManageTagsDialog } from '@/components/tags/ManageTagsDialog';
 import { SplitCategoryDialog } from '@/components/transactions/SplitCategoryDialog';
 import { AmortizationDialog } from '@/components/transactions/AmortizationDialog';
+import { RelationshipDialog } from '@/components/transactions/RelationshipDialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -31,6 +32,12 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import type { TransactionFilters, TransactionResponse } from '@/types/transactions';
 
 const TRANSACTION_TYPES = [
@@ -69,6 +76,7 @@ export function TransactionsPage() {
   const [tagsTargetId, setTagsTargetId] = useState<string | null>(null);
   const [splitTarget, setSplitTarget] = useState<TransactionResponse | null>(null);
   const [amortizeTarget, setAmortizeTarget] = useState<TransactionResponse | null>(null);
+  const [relationshipTarget, setRelationshipTarget] = useState<TransactionResponse | null>(null);
 
   const activeFilters: TransactionFilters = {
     ...filters,
@@ -404,35 +412,7 @@ export function TransactionsPage() {
                           size="icon"
                           variant="ghost"
                           className="h-7 w-7"
-                          title="Split categories"
-                          onClick={() => setSplitTarget(tx)}
-                        >
-                          <Scissors className="h-3.5 w-3.5" />
-                        </Button>
-                        {isExpense && !tx.split_allocations?.length && (
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="h-7 w-7"
-                            title="Amortize"
-                            onClick={() => setAmortizeTarget(tx)}
-                          >
-                            <CalendarRange className="h-3.5 w-3.5" />
-                          </Button>
-                        )}
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-7 w-7"
-                          title="Manage tags"
-                          onClick={() => setTagsTargetId(tx.id)}
-                        >
-                          <Tag className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-7 w-7"
+                          title="Edit"
                           onClick={() => openEdit(tx)}
                         >
                           <Pencil className="h-3.5 w-3.5" />
@@ -441,10 +421,38 @@ export function TransactionsPage() {
                           size="icon"
                           variant="ghost"
                           className="h-7 w-7 text-destructive hover:text-destructive"
+                          title="Delete"
                           onClick={() => setDeleteTarget(tx)}
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button size="icon" variant="ghost" className="h-7 w-7">
+                              <MoreHorizontal className="h-3.5 w-3.5" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => setTagsTargetId(tx.id)}>
+                              <Tag className="mr-2 h-3.5 w-3.5" />
+                              Manage Tags
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setSplitTarget(tx)}>
+                              <Scissors className="mr-2 h-3.5 w-3.5" />
+                              Split Categories
+                            </DropdownMenuItem>
+                            {isExpense && !tx.split_allocations?.length && (
+                              <DropdownMenuItem onClick={() => setAmortizeTarget(tx)}>
+                                <CalendarRange className="mr-2 h-3.5 w-3.5" />
+                                Amortize
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuItem onClick={() => setRelationshipTarget(tx)}>
+                              <Link2 className="mr-2 h-3.5 w-3.5" />
+                              Relationships
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -512,6 +520,11 @@ export function TransactionsPage() {
         open={!!amortizeTarget}
         onOpenChange={(open) => { if (!open) setAmortizeTarget(null); }}
         transaction={amortizeTarget}
+      />
+      <RelationshipDialog
+        open={!!relationshipTarget}
+        onOpenChange={(open) => { if (!open) setRelationshipTarget(null); }}
+        transaction={relationshipTarget}
       />
     </div>
   );
