@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { MultiSelect } from '@/components/ui/multi-select';
 import {
   Select,
   SelectContent,
@@ -83,7 +84,7 @@ export function TransactionsPage() {
   const allCategories = categories ?? [];
   const parentCategories = allCategories.filter((c) => !c.parent_category_uuid);
   const subcategoryOptions = allCategories.filter(
-    (c) => c.parent_category_uuid === filters.category_uuid
+    (c) => c.parent_category_uuid && filters.category_uuid?.includes(c.parent_category_uuid)
   );
 
   const totalCount = stats?.total_count ?? 0;
@@ -214,66 +215,57 @@ export function TransactionsPage() {
           </SelectContent>
         </Select>
 
-        <Select
-          value={filters.category_uuid ?? '_all_'}
-          onValueChange={(v) => {
-            const val = v === '_all_' ? undefined : v;
-            setFilters((prev) => ({ ...prev, category_uuid: val, subcategory_uuid: undefined }));
+        <MultiSelect
+          className="w-44"
+          placeholder="All categories"
+          options={parentCategories.map((c) => ({ value: c.id, label: c.name }))}
+          value={filters.category_uuid ?? []}
+          onChange={(selected) => {
+            const removedCategories = (filters.category_uuid ?? []).filter(
+              (id) => !selected.includes(id)
+            );
+            const filteredSubs = (filters.subcategory_uuid ?? []).filter((subId) => {
+              const sub = allCategories.find((c) => c.id === subId);
+              return sub && !removedCategories.includes(sub.parent_category_uuid!);
+            });
+            setFilters((prev) => ({
+              ...prev,
+              category_uuid: selected.length ? selected : undefined,
+              subcategory_uuid: filteredSubs.length ? filteredSubs : undefined,
+            }));
           }}
-        >
-          <SelectTrigger className="w-44">
-            <SelectValue placeholder="All categories" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="_all_">All categories</SelectItem>
-            {parentCategories.map((c) => (
-              <SelectItem key={c.id} value={c.id}>
-                {c.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        />
 
-        <Select
-          value={filters.subcategory_uuid ?? '_all_'}
-          onValueChange={(v) => setFilter('subcategory_uuid', v === '_all_' ? undefined : v)}
-          disabled={!filters.category_uuid || subcategoryOptions.length === 0}
-        >
-          <SelectTrigger className="w-44">
-            <SelectValue placeholder="All subcategories" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="_all_">All subcategories</SelectItem>
-            {subcategoryOptions.map((c) => (
-              <SelectItem key={c.id} value={c.id}>
-                {c.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <MultiSelect
+          className="w-44"
+          placeholder="All subcategories"
+          options={subcategoryOptions.map((c) => ({ value: c.id, label: c.name }))}
+          value={filters.subcategory_uuid ?? []}
+          onChange={(selected) =>
+            setFilters((prev) => ({
+              ...prev,
+              subcategory_uuid: selected.length ? selected : undefined,
+            }))
+          }
+          disabled={!filters.category_uuid?.length || subcategoryOptions.length === 0}
+        />
 
-        <Select
-          value={filters.tag_uuid ?? '_all_'}
-          onValueChange={(v) => setFilter('tag_uuid', v === '_all_' ? undefined : v)}
-        >
-          <SelectTrigger className="w-36">
-            <SelectValue placeholder="All tags" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="_all_">All tags</SelectItem>
-            {(tags ?? []).map((t) => (
-              <SelectItem key={t.id} value={t.id}>
-                <span className="flex items-center gap-1.5">
-                  <span
-                    className="inline-block h-2.5 w-2.5 rounded-full shrink-0"
-                    style={{ backgroundColor: t.color }}
-                  />
-                  {t.tag_name}
-                </span>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <MultiSelect
+          className="w-40"
+          placeholder="All tags"
+          options={(tags ?? []).map((t) => ({
+            value: t.id,
+            label: t.tag_name,
+            color: t.color,
+          }))}
+          value={filters.tag_uuid ?? []}
+          onChange={(selected) =>
+            setFilters((prev) => ({
+              ...prev,
+              tag_uuid: selected.length ? selected : undefined,
+            }))
+          }
+        />
 
         <Input
           type="date"

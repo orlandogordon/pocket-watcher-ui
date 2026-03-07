@@ -10,7 +10,12 @@ import type {
 function buildQuery(filters: TransactionFilters): string {
   const params = new URLSearchParams();
   for (const [key, value] of Object.entries(filters)) {
-    if (value !== undefined && value !== '' && value !== null) {
+    if (value === undefined || value === '' || value === null) continue;
+    if (Array.isArray(value)) {
+      for (const item of value) {
+        params.append(key, String(item));
+      }
+    } else {
       params.set(key, String(value));
     }
   }
