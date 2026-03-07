@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { format, parseISO } from 'date-fns';
-import { Plus, Pencil, Trash2, X, Tag } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, Tag, Scissors, CalendarRange } from 'lucide-react';
 import { useTransactions, useTransactionStats } from '@/hooks/useTransactions';
 import { useAccounts } from '@/hooks/useAccounts';
 import { useCategories } from '@/hooks/useCategories';
@@ -9,6 +9,8 @@ import { formatCurrency } from '@/lib/format';
 import { TransactionFormDialog } from '@/components/transactions/TransactionFormDialog';
 import { DeleteTransactionDialog } from '@/components/transactions/DeleteTransactionDialog';
 import { ManageTagsDialog } from '@/components/tags/ManageTagsDialog';
+import { SplitCategoryDialog } from '@/components/transactions/SplitCategoryDialog';
+import { AmortizationDialog } from '@/components/transactions/AmortizationDialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -65,6 +67,8 @@ export function TransactionsPage() {
   const [editTarget, setEditTarget] = useState<TransactionResponse | undefined>();
   const [deleteTarget, setDeleteTarget] = useState<TransactionResponse | null>(null);
   const [tagsTargetId, setTagsTargetId] = useState<string | null>(null);
+  const [splitTarget, setSplitTarget] = useState<TransactionResponse | null>(null);
+  const [amortizeTarget, setAmortizeTarget] = useState<TransactionResponse | null>(null);
 
   const activeFilters: TransactionFilters = {
     ...filters,
@@ -346,10 +350,16 @@ export function TransactionsPage() {
                       {accountMap.get(tx.account_uuid) ?? '—'}
                     </TableCell>
                     <TableCell className="text-sm">
-                      {tx.category?.name ?? '—'}
+                      {tx.split_allocations?.length > 0 ? (
+                        <Badge variant="secondary" className="text-xs">
+                          Split ({tx.split_allocations.length})
+                        </Badge>
+                      ) : (
+                        tx.category?.name ?? '—'
+                      )}
                     </TableCell>
                     <TableCell className="text-sm">
-                      {tx.subcategory?.name ?? '—'}
+                      {tx.split_allocations?.length > 0 ? '—' : tx.subcategory?.name ?? '—'}
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1">
@@ -390,6 +400,26 @@ export function TransactionsPage() {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-7 w-7"
+                          title="Split categories"
+                          onClick={() => setSplitTarget(tx)}
+                        >
+                          <Scissors className="h-3.5 w-3.5" />
+                        </Button>
+                        {isExpense && !tx.split_allocations?.length && (
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-7 w-7"
+                            title="Amortize"
+                            onClick={() => setAmortizeTarget(tx)}
+                          >
+                            <CalendarRange className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
                         <Button
                           size="icon"
                           variant="ghost"
@@ -472,6 +502,16 @@ export function TransactionsPage() {
         onOpenChange={(open) => { if (!open) setTagsTargetId(null); }}
         transactionId={tagsTargetId}
         allTags={tags ?? []}
+      />
+      <SplitCategoryDialog
+        open={!!splitTarget}
+        onOpenChange={(open) => { if (!open) setSplitTarget(null); }}
+        transaction={splitTarget}
+      />
+      <AmortizationDialog
+        open={!!amortizeTarget}
+        onOpenChange={(open) => { if (!open) setAmortizeTarget(null); }}
+        transaction={amortizeTarget}
       />
     </div>
   );

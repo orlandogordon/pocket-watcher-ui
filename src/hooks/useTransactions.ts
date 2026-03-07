@@ -5,6 +5,10 @@ import type {
   TransactionFilters,
   TransactionResponse,
   TransactionStats,
+  SplitAllocationCreate,
+  AmortizationScheduleResponse,
+  AmortizationEqualSplit,
+  AmortizationCustom,
 } from '@/types/transactions';
 
 function buildQuery(filters: TransactionFilters): string {
@@ -81,5 +85,73 @@ export function useDeleteTransaction() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
     },
+  });
+}
+
+export function useUpdateSplits() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ uuid, allocations }: {
+      uuid: string;
+      allocations: SplitAllocationCreate[];
+    }) =>
+      apiFetch<TransactionResponse>(`/transactions/${uuid}/splits`, {
+        method: 'PUT',
+        body: JSON.stringify({ allocations }),
+      }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['transactions'] }),
+  });
+}
+
+export function useDeleteSplits() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (uuid: string) =>
+      apiFetch<void>(`/transactions/${uuid}/splits`, { method: 'DELETE' }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['transactions'] }),
+  });
+}
+
+export function useAmortization(uuid: string | null) {
+  return useQuery({
+    queryKey: ['transactions', uuid, 'amortization'],
+    queryFn: async () => {
+      try {
+        return await apiFetch<AmortizationScheduleResponse>(
+          `/transactions/${uuid}/amortization`
+        );
+      } catch (e) {
+        if (e instanceof Error && e.message === 'No amortization schedule found') {
+          return null;
+        }
+        throw e;
+      }
+    },
+    enabled: !!uuid,
+    retry: false,
+  });
+}
+
+export function useCreateAmortization() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ uuid, data }: {
+      uuid: string;
+      data: AmortizationEqualSplit | AmortizationCustom;
+    }) =>
+      apiFetch<AmortizationScheduleResponse>(
+        `/transactions/${uuid}/amortization`,
+        { method: 'PUT', body: JSON.stringify(data) },
+      ),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['transactions'] }),
+  });
+}
+
+export function useDeleteAmortization() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (uuid: string) =>
+      apiFetch<void>(`/transactions/${uuid}/amortization`, { method: 'DELETE' }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['transactions'] }),
   });
 }
