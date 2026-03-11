@@ -1,6 +1,35 @@
 # Frontend TODOs
 
-All 11 frontend items have been completed and moved to the `completed/` folder.
+## Open Items
+
+Based on completed backend todos (Phases 1-5) and existing gaps:
+
+| # | Item | Backend Source | Size |
+|---|------|---------------|------|
+| 13 | Verify: snapshot recalc on delete (no frontend change expected) | Backend 03 | Small |
+| 14 | Verify: amortization category inheritance (no frontend change expected) | Backend 05 | Small |
+| 15 | Investment sale profit/loss display | Backend 01 (cost basis snapshot) | Small |
+| 16 | Snapshot edit dialog | Backend 02 (edit snapshot on review) | Medium |
+| 17 | Enable amortization for all transaction types | Backend 07 (type restriction removed) | Small |
+| 18 | Type cleanup: remove split notes & SPLITS relationship type | Backend 04 + 06 | Small |
+| 19 | Budget template system | Backend 08 (budget redesign) | Large |
+| 20 | Monthly average analytics page | Backend 09 (analytics endpoint) | Medium-Large |
+
+### Recommended Execution Order
+
+```
+Phase A — Quick wins (17, 18)
+  Small type/UI cleanups, can be done together in one session.
+
+Phase B — Investment & Snapshot improvements (15, 16)
+  Independent of each other, medium effort.
+
+Phase C — Budget template rebuild (19)
+  Largest item — full rebuild of budget UI. Do this when ready for a focused session.
+
+Phase D — Analytics page (20)
+  New page, no existing UI to replace. Good standalone task.
+```
 
 ## Completed Items
 
@@ -17,7 +46,4 @@ All 11 frontend items have been completed and moved to the `completed/` folder.
 | 09 | Split category UI | `7ed9cd2` |
 | 10 | Amortization UI | `7ed9cd2` |
 | 11 | Amount sign coloring audit | `9ec62a9` |
-
-## Not Yet Implemented
-
-- **Transaction relationships UI** — Backend Tier 5.1 (refund attribution via REFUNDS/OFFSETS/REVERSES relationships) and the relationship CRUD endpoints (`GET /transactions/{uuid}/relationships`, create/update/delete) have no frontend counterpart yet. This was not part of the original 11 frontend todos.
+| 12 | Transaction relationships UI | `7982135` |
