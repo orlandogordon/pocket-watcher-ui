@@ -20,14 +20,12 @@ export interface SplitAllocationResponse {
   subcategory_uuid: string | null;
   subcategory_name: string | null;
   amount: string;
-  notes: string | null;
 }
 
 export interface SplitAllocationCreate {
   category_uuid: string;
   subcategory_uuid?: string | null;
   amount: string;
-  notes?: string;
 }
 
 export interface TransactionResponse {
@@ -95,7 +93,7 @@ export interface AmortizationCustom {
 
 // --- Relationship types ---
 
-export type RelationshipType = 'REFUNDS' | 'OFFSETS' | 'SPLITS' | 'FEES_FOR' | 'REVERSES';
+export type RelationshipType = 'REFUNDS' | 'OFFSETS' | 'FEES_FOR' | 'REVERSES';
 
 export const ABSORBING_RELATIONSHIP_TYPES: Set<RelationshipType> =
   new Set(['REFUNDS', 'OFFSETS', 'REVERSES']);
@@ -105,7 +103,6 @@ export const RELATIONSHIP_TYPE_LABELS: Record<RelationshipType, string> = {
   OFFSETS: 'Offsets',
   REVERSES: 'Reverses',
   FEES_FOR: 'Fee for',
-  SPLITS: 'Split of',
 };
 
 export interface TransactionRelationshipResponse {

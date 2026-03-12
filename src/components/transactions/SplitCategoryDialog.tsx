@@ -25,14 +25,12 @@ interface AllocationRow {
   category_uuid: string;
   subcategory_uuid: string;
   amount: string;
-  notes: string;
 }
 
 const emptyRow = (): AllocationRow => ({
   category_uuid: '',
   subcategory_uuid: '',
   amount: '',
-  notes: '',
 });
 
 interface Props {
@@ -65,7 +63,6 @@ export function SplitCategoryDialog({ open, onOpenChange, transaction }: Props) 
           category_uuid: a.category_uuid,
           subcategory_uuid: a.subcategory_uuid ?? '',
           amount: a.amount,
-          notes: a.notes ?? '',
         }))
       );
     } else {
@@ -93,7 +90,6 @@ export function SplitCategoryDialog({ open, onOpenChange, transaction }: Props) 
         category_uuid: r.category_uuid,
         subcategory_uuid: r.subcategory_uuid || undefined,
         amount: r.amount,
-        notes: r.notes || undefined,
       }));
     updateSplits.mutate(
       { uuid: transaction.id, allocations },

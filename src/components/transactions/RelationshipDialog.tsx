@@ -52,7 +52,6 @@ const REVERSE_DIRECTION_LABELS: Record<RelationshipType, string> = {
   OFFSETS: 'Offset by',
   REVERSES: 'Reversed by',
   FEES_FOR: 'Has fee',
-  SPLITS: 'Has split',
 };
 
 interface Props {

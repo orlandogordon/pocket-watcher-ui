@@ -441,7 +441,7 @@ export function TransactionsPage() {
                               <Scissors className="mr-2 h-3.5 w-3.5" />
                               Split Categories
                             </DropdownMenuItem>
-                            {isExpense && !tx.split_allocations?.length && (
+                            {!tx.split_allocations?.length && (
                               <DropdownMenuItem onClick={() => setAmortizeTarget(tx)}>
                                 <CalendarRange className="mr-2 h-3.5 w-3.5" />
                                 Amortize
