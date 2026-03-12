@@ -33,6 +33,7 @@ export interface InvestmentTransactionResponse {
   total_amount: string;
   transaction_date: string;
   description: string | null;
+  cost_basis_at_sale: string | null;
   holding_id: string | null;
   security_type: string | null;
   created_at: string;

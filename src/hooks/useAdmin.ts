@@ -50,6 +50,16 @@ export interface NeedsReviewSnapshot {
   created_at: string;
 }
 
+export interface SnapshotUpdateRequest {
+  balance?: string;
+  securities_value?: string;
+  cash_balance?: string;
+  total_cost_basis?: string;
+  unrealized_gain_loss?: string;
+  realized_gain_loss?: string;
+  dismiss_review?: boolean;
+}
+
 // Hooks
 
 export const adminKeys = {
@@ -129,6 +139,31 @@ export function useDismissSnapshotReview() {
       queryClient.invalidateQueries({
         queryKey: adminKeys.needsReview(variables.accountUuid),
       });
+    },
+  });
+}
+
+export function useUpdateSnapshot() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      accountUuid,
+      snapshotUuid,
+      data,
+    }: {
+      accountUuid: string;
+      snapshotUuid: string;
+      data: SnapshotUpdateRequest;
+    }) =>
+      apiFetch<NeedsReviewSnapshot>(
+        `/account-history/accounts/${accountUuid}/snapshots/${snapshotUuid}`,
+        { method: 'PUT', body: JSON.stringify(data) },
+      ),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: adminKeys.needsReview(variables.accountUuid),
+      });
+      queryClient.invalidateQueries({ queryKey: ['account-history'] });
     },
   });
 }

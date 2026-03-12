@@ -357,6 +357,7 @@ export function InvestmentDetailPage() {
                   <TableHead className="text-right">Qty</TableHead>
                   <TableHead className="text-right">Price/Share</TableHead>
                   <TableHead className="text-right">Total</TableHead>
+                  <TableHead className="text-right">Sale P&L</TableHead>
                   <TableHead>Description</TableHead>
                   <TableHead className="w-[80px]" />
                 </TableRow>
@@ -388,6 +389,24 @@ export function InvestmentDetailPage() {
                     </TableCell>
                     <TableCell className="text-right tabular-nums font-medium">
                       {formatCurrency(tx.total_amount)}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums text-sm">
+                      {(() => {
+                        if (tx.transaction_type !== 'SELL' || !tx.cost_basis_at_sale || !tx.price_per_share || !tx.quantity) return '—';
+                        const price = parseFloat(tx.price_per_share);
+                        const cost = parseFloat(tx.cost_basis_at_sale);
+                        const qty = parseFloat(tx.quantity);
+                        const gainPerShare = price - cost;
+                        const totalGain = gainPerShare * qty;
+                        const pct = cost !== 0 ? (gainPerShare / cost) * 100 : 0;
+                        return (
+                          <span className={totalGain > 0 ? 'text-green-600' : totalGain < 0 ? 'text-red-500' : ''}>
+                            {totalGain >= 0 ? '+' : ''}{formatCurrency(totalGain.toString())}
+                            {' '}
+                            <span className="text-xs">({pct >= 0 ? '+' : ''}{pct.toFixed(1)}%)</span>
+                          </span>
+                        );
+                      })()}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground max-w-[200px] truncate">
                       {tx.description ?? '—'}
