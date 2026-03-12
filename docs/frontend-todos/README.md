@@ -6,18 +6,12 @@ Based on completed backend todos (Phases 1-5) and existing gaps:
 
 | # | Item | Backend Source | Size |
 |---|------|---------------|------|
-| 13 | Verify: snapshot recalc on delete (no frontend change expected) | Backend 03 | Small |
-| 14 | Verify: amortization category inheritance (no frontend change expected) | Backend 05 | Small |
-| 19 | Budget template system | Backend 08 (budget redesign) | Large |
 | 20 | Monthly average analytics page | Backend 09 (analytics endpoint) | Medium-Large |
 
 ### Recommended Execution Order
 
 ```
-Phase A — Budget template rebuild (19)
-  Largest item — full rebuild of budget UI. Do this when ready for a focused session.
-
-Phase B — Analytics page (20)
+Phase A — Analytics page (20)
   New page, no existing UI to replace. Good standalone task.
 ```
 
@@ -39,5 +33,8 @@ Phase B — Analytics page (20)
 | 12 | Transaction relationships UI | `7982135` |
 | 17 | Enable amortization for all transaction types | `4d7ce0b` |
 | 18 | Type cleanup: remove split notes & SPLITS relationship type | `4d7ce0b` |
-| 15 | Investment sale profit/loss display | `pending` |
-| 16 | Snapshot edit dialog | `pending` |
+| 15 | Investment sale profit/loss display | `d971412` |
+| 16 | Snapshot edit dialog | `d971412` |
+| 13 | Verify: snapshot recalc on delete (no frontend change needed) | n/a |
+| 14 | Verify: amortization category inheritance (no frontend change needed) | n/a |
+| 19 | Budget template system | (full rebuild) |

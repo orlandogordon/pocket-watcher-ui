@@ -8,21 +8,21 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { useDeleteBudget } from '@/hooks/useBudgets';
-import type { BudgetResponse } from '@/types/budgets';
+import { useDeleteTemplate } from '@/hooks/useBudgets';
+import type { BudgetTemplateResponse } from '@/types/budgets';
 
-interface DeleteBudgetDialogProps {
+interface DeleteTemplateDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  budget: BudgetResponse | null;
+  template: BudgetTemplateResponse | null;
 }
 
-export function DeleteBudgetDialog({ open, onOpenChange, budget }: DeleteBudgetDialogProps) {
-  const deleteBudget = useDeleteBudget();
+export function DeleteTemplateDialog({ open, onOpenChange, template }: DeleteTemplateDialogProps) {
+  const deleteTemplate = useDeleteTemplate();
 
   function handleDelete() {
-    if (!budget) return;
-    deleteBudget.mutate(budget.id, {
+    if (!template) return;
+    deleteTemplate.mutate(template.id, {
       onSuccess: () => onOpenChange(false),
     });
   }
@@ -31,20 +31,21 @@ export function DeleteBudgetDialog({ open, onOpenChange, budget }: DeleteBudgetD
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete Budget</AlertDialogTitle>
+          <AlertDialogTitle>Delete Template</AlertDialogTitle>
           <AlertDialogDescription>
             Are you sure you want to delete{' '}
-            <span className="font-medium">{budget?.budget_name}</span>? This cannot be undone.
+            <span className="font-medium">{template?.template_name}</span>? This will
+            unassign it from all months that currently use it. This cannot be undone.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
           <AlertDialogAction
             onClick={handleDelete}
-            disabled={deleteBudget.isPending}
+            disabled={deleteTemplate.isPending}
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >
-            {deleteBudget.isPending ? 'Deleting...' : 'Delete'}
+            {deleteTemplate.isPending ? 'Deleting...' : 'Delete'}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

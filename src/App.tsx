@@ -6,7 +6,7 @@ import { TransactionsPage } from '@/pages/TransactionsPage';
 import { CategoriesPage } from '@/pages/CategoriesPage';
 import { TagsPage } from '@/pages/TagsPage';
 import { BudgetsPage } from '@/pages/BudgetsPage';
-import { BudgetDetailPage } from '@/pages/BudgetDetailPage';
+import { BudgetTemplatesPage } from '@/pages/BudgetTemplatesPage';
 import { UploadsPage } from '@/pages/UploadsPage';
 import { UploadHistoryPage } from '@/pages/UploadHistoryPage';
 import { InvestmentsPage } from '@/pages/InvestmentsPage';
@@ -29,7 +29,7 @@ export default function App() {
           <Route path="categories" element={<CategoriesPage />} />
           <Route path="tags" element={<TagsPage />} />
           <Route path="budgets" element={<BudgetsPage />} />
-          <Route path="budgets/:uuid" element={<BudgetDetailPage />} />
+          <Route path="budgets/templates" element={<BudgetTemplatesPage />} />
           <Route path="uploads" element={<UploadsPage />} />
           <Route path="uploads/history" element={<UploadHistoryPage />} />
           <Route path="investments" element={<InvestmentsPage />} />

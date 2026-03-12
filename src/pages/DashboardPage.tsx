@@ -13,7 +13,7 @@ import { ArrowRight } from 'lucide-react';
 
 import { useAccountStats } from '@/hooks/useAccounts';
 import { useTransactions } from '@/hooks/useTransactions';
-import { useActiveBudgets, useBudgetPerformance } from '@/hooks/useBudgets';
+import { useBudgetMonth, useBudgetMonthPerformance } from '@/hooks/useBudgets';
 import { useNetWorthHistory } from '@/hooks/useNetWorthHistory';
 import { formatCurrency } from '@/lib/format';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -48,7 +48,8 @@ function StatCard({
 export function DashboardPage() {
   const { data: stats } = useAccountStats();
   const { data: transactions } = useTransactions({ limit: 5, order_desc: true });
-  const { data: activeBudgets } = useActiveBudgets();
+  const now = new Date();
+  const { data: budgetMonth } = useBudgetMonth(now.getFullYear(), now.getMonth() + 1);
   const { data: netWorthHistory } = useNetWorthHistory(30);
 
   const netWorth = parseFloat(stats?.net_worth ?? '0');
@@ -64,8 +65,11 @@ export function DashboardPage() {
   const trendUp = lastVal >= firstVal;
   const chartColor = trendUp ? '#16a34a' : '#dc2626';
 
-  const activeBudget = activeBudgets?.[0];
-  const { data: activeBudgetPerformance } = useBudgetPerformance(activeBudget?.id ?? '');
+  const hasTemplate = !!budgetMonth?.template;
+  const { data: monthPerformance } = useBudgetMonthPerformance(
+    now.getFullYear(),
+    now.getMonth() + 1,
+  );
 
   return (
     <div className="p-6 space-y-6">
@@ -151,31 +155,35 @@ export function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Active Budget */}
+        {/* Current Month Budget */}
         <Card>
           <CardHeader>
-            <CardTitle>Active Budget</CardTitle>
+            <CardTitle>This Month's Budget</CardTitle>
           </CardHeader>
           <CardContent>
-            {!activeBudget ? (
-              <p className="text-sm text-muted-foreground">No active budget.</p>
+            {!hasTemplate ? (
+              <p className="text-sm text-muted-foreground">No budget template assigned.</p>
             ) : (
               <div className="space-y-3">
-                <p className="text-sm font-semibold">{activeBudget.budget_name}</p>
-                {(activeBudgetPerformance ?? []).slice(0, 6).map((item) => {
+                <p className="text-sm font-semibold">{budgetMonth!.template!.template_name}</p>
+                {(monthPerformance ?? []).slice(0, 6).map((item) => {
                   const pct = Math.min(100, item.percentage_used ?? 0);
                   return (
-                    <div key={item.category_uuid} className="space-y-1">
+                    <div key={`${item.category_uuid}-${item.subcategory_uuid ?? ''}`} className="space-y-1">
                       <div className="flex justify-between text-xs gap-2">
-                        <span className="truncate text-muted-foreground">{item.category_name}</span>
-                        <span className={`shrink-0 ${item.over_budget ? 'text-red-600 font-medium' : ''}`}>
+                        <span className="truncate text-muted-foreground">
+                          {item.subcategory_name
+                            ? `${item.category_name} > ${item.subcategory_name}`
+                            : item.category_name}
+                        </span>
+                        <span className={`shrink-0 ${item.status === 'over_budget' ? 'text-red-600 font-medium' : ''}`}>
                           {formatCurrency(item.spent_amount)} / {formatCurrency(item.allocated_amount)}
                         </span>
                       </div>
                       <div className="h-1.5 w-full rounded-full bg-secondary">
                         <div
                           className={`h-1.5 rounded-full transition-all ${
-                            item.over_budget ? 'bg-red-500' : 'bg-primary'
+                            item.status === 'over_budget' ? 'bg-red-500' : 'bg-primary'
                           }`}
                           style={{ width: `${pct}%` }}
                         />
@@ -183,12 +191,12 @@ export function DashboardPage() {
                     </div>
                   );
                 })}
-                {!activeBudgetPerformance && (
+                {!monthPerformance && (
                   <p className="text-xs text-muted-foreground">Loading categories...</p>
                 )}
-                {activeBudgetPerformance && activeBudgetPerformance.length > 6 && (
+                {monthPerformance && monthPerformance.length > 6 && (
                   <p className="text-xs text-muted-foreground pt-1">
-                    +{activeBudgetPerformance.length - 6} more categories
+                    +{monthPerformance.length - 6} more categories
                   </p>
                 )}
               </div>

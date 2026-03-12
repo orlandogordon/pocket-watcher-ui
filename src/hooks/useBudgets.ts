@@ -1,146 +1,160 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api';
 import type {
-  BudgetResponse,
-  BudgetCreate,
-  BudgetUpdate,
-  BudgetCategoryCreate,
-  BudgetCategoryResponse,
+  BudgetTemplateResponse,
+  BudgetTemplateCreate,
+  BudgetTemplateUpdate,
+  BudgetTemplateCategoryCreate,
+  BudgetTemplateCategoryUpdate,
+  BudgetTemplateCategoryResponse,
+  BudgetMonthResponse,
+  BudgetMonthAssign,
+  BudgetMonthStats,
   BudgetPerformanceItem,
 } from '@/types/budgets';
 
-export function useActiveBudgets() {
+// ── Template queries ──
+
+export function useTemplates() {
   return useQuery({
-    queryKey: ['budgets', 'active'],
-    queryFn: () =>
-      apiFetch<BudgetResponse[]>('/budgets/?active_only=true&include_spending=true'),
+    queryKey: ['budget-templates'],
+    queryFn: () => apiFetch<BudgetTemplateResponse[]>('/budgets/templates/'),
   });
 }
 
-export function useBudgets() {
+export function useTemplate(uuid: string) {
   return useQuery({
-    queryKey: ['budgets'],
-    queryFn: () => apiFetch<BudgetResponse[]>('/budgets/?include_spending=true'),
-  });
-}
-
-export function useBudget(uuid: string) {
-  return useQuery({
-    queryKey: ['budgets', uuid],
-    queryFn: () => apiFetch<BudgetResponse>(`/budgets/${uuid}`),
+    queryKey: ['budget-templates', uuid],
+    queryFn: () => apiFetch<BudgetTemplateResponse>(`/budgets/templates/${uuid}`),
     enabled: !!uuid,
   });
 }
 
-export function useBudgetPerformance(uuid: string) {
-  return useQuery({
-    queryKey: ['budgets', uuid, 'performance'],
-    queryFn: () => apiFetch<BudgetPerformanceItem[]>(`/budgets/${uuid}/performance`),
-    enabled: !!uuid,
-  });
-}
+// ── Template mutations ──
 
-export function useCreateBudget() {
+export function useCreateTemplate() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: BudgetCreate) =>
-      apiFetch<BudgetResponse>('/budgets/', {
+    mutationFn: (data: BudgetTemplateCreate) =>
+      apiFetch<BudgetTemplateResponse>('/budgets/templates/', {
         method: 'POST',
         body: JSON.stringify(data),
       }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['budgets'] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['budget-templates'] }),
   });
 }
 
-export function useUpdateBudget() {
+export function useUpdateTemplate() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ uuid, data }: { uuid: string; data: BudgetUpdate }) =>
-      apiFetch<BudgetResponse>(`/budgets/${uuid}`, {
+    mutationFn: ({ uuid, data }: { uuid: string; data: BudgetTemplateUpdate }) =>
+      apiFetch<BudgetTemplateResponse>(`/budgets/templates/${uuid}`, {
         method: 'PUT',
         body: JSON.stringify(data),
       }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['budgets'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['budget-templates'] });
+      qc.invalidateQueries({ queryKey: ['budget-months'] });
+    },
   });
 }
 
-export function useDeleteBudget() {
+export function useDeleteTemplate() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (uuid: string) =>
-      apiFetch<void>(`/budgets/${uuid}`, { method: 'DELETE' }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['budgets'] }),
-  });
-}
-
-export function useCopyBudget() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({
-      uuid,
-      name,
-      startDate,
-      endDate,
-    }: {
-      uuid: string;
-      name: string;
-      startDate: string;
-      endDate: string;
-    }) => {
-      const params = new URLSearchParams({
-        new_budget_name: name,
-        new_start_date: startDate,
-        new_end_date: endDate,
-      });
-      return apiFetch<BudgetResponse>(`/budgets/${uuid}/copy?${params}`, {
-        method: 'POST',
-      });
+      apiFetch<void>(`/budgets/templates/${uuid}`, { method: 'DELETE' }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['budget-templates'] });
+      qc.invalidateQueries({ queryKey: ['budget-months'] });
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['budgets'] }),
   });
 }
 
-export function useAddBudgetCategory() {
+// ── Template category mutations ──
+
+export function useAddTemplateCategory() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({
-      budgetUuid,
-      data,
-    }: {
-      budgetUuid: string;
-      data: BudgetCategoryCreate;
-    }) =>
-      apiFetch<BudgetCategoryResponse>(`/budgets/${budgetUuid}/categories/`, {
+    mutationFn: ({ templateUuid, data }: { templateUuid: string; data: BudgetTemplateCategoryCreate }) =>
+      apiFetch<BudgetTemplateCategoryResponse>(`/budgets/templates/${templateUuid}/categories/`, {
         method: 'POST',
         body: JSON.stringify(data),
       }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['budgets'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['budget-templates'] });
+      qc.invalidateQueries({ queryKey: ['budget-months'] });
+    },
   });
 }
 
-export function useUpdateBudgetCategory() {
+export function useUpdateTemplateCategory() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({
-      categoryUuid,
-      allocated_amount,
-    }: {
-      categoryUuid: string;
-      allocated_amount: string;
-    }) =>
-      apiFetch<BudgetCategoryResponse>(`/budgets/categories/${categoryUuid}`, {
+    mutationFn: ({ categoryUuid, data }: { categoryUuid: string; data: BudgetTemplateCategoryUpdate }) =>
+      apiFetch<BudgetTemplateCategoryResponse>(`/budgets/templates/categories/${categoryUuid}`, {
         method: 'PUT',
-        body: JSON.stringify({ allocated_amount }),
+        body: JSON.stringify(data),
       }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['budgets'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['budget-templates'] });
+      qc.invalidateQueries({ queryKey: ['budget-months'] });
+    },
   });
 }
 
-export function useDeleteBudgetCategory() {
+export function useDeleteTemplateCategory() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (categoryUuid: string) =>
-      apiFetch<void>(`/budgets/categories/${categoryUuid}`, { method: 'DELETE' }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['budgets'] }),
+      apiFetch<void>(`/budgets/templates/categories/${categoryUuid}`, { method: 'DELETE' }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['budget-templates'] });
+      qc.invalidateQueries({ queryKey: ['budget-months'] });
+    },
+  });
+}
+
+// ── Month queries ──
+
+export function useBudgetMonth(year: number, month: number) {
+  return useQuery({
+    queryKey: ['budget-months', year, month],
+    queryFn: () => apiFetch<BudgetMonthResponse>(`/budgets/months/${year}/${month}`),
+  });
+}
+
+export function useBudgetMonths() {
+  return useQuery({
+    queryKey: ['budget-months'],
+    queryFn: () => apiFetch<BudgetMonthResponse[]>('/budgets/months/'),
+  });
+}
+
+export function useBudgetMonthStats(year: number, month: number) {
+  return useQuery({
+    queryKey: ['budget-months', year, month, 'stats'],
+    queryFn: () => apiFetch<BudgetMonthStats>(`/budgets/months/${year}/${month}/stats`),
+  });
+}
+
+export function useBudgetMonthPerformance(year: number, month: number) {
+  return useQuery({
+    queryKey: ['budget-months', year, month, 'performance'],
+    queryFn: () => apiFetch<BudgetPerformanceItem[]>(`/budgets/months/${year}/${month}/performance`),
+  });
+}
+
+// ── Month mutations ──
+
+export function useAssignTemplate() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ year, month, data }: { year: number; month: number; data: BudgetMonthAssign }) =>
+      apiFetch<BudgetMonthResponse>(`/budgets/months/${year}/${month}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['budget-months'] }),
   });
 }

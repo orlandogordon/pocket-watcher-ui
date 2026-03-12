@@ -1,218 +1,405 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { format, parseISO } from 'date-fns';
-import { Plus, Pencil, Trash2, Copy, ArrowRight } from 'lucide-react';
-import { useBudgets } from '@/hooks/useBudgets';
-import { BudgetFormDialog } from '@/components/budgets/BudgetFormDialog';
-import { DeleteBudgetDialog } from '@/components/budgets/DeleteBudgetDialog';
-import { CopyBudgetDialog } from '@/components/budgets/CopyBudgetDialog';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { ChevronLeft, ChevronRight, Settings2 } from 'lucide-react';
+import {
+  useBudgetMonth,
+  useBudgetMonthPerformance,
+  useTemplates,
+  useAssignTemplate,
+} from '@/hooks/useBudgets';
+import { useTransactionStats } from '@/hooks/useTransactions';
 import { formatCurrency } from '@/lib/format';
-import { cn } from '@/lib/utils';
-import type { BudgetResponse } from '@/types/budgets';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import type { BudgetPerformanceItem } from '@/types/budgets';
 
-function formatDate(iso: string) {
-  return format(parseISO(iso), 'MMM d, yyyy');
-}
+const MONTH_NAMES = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
 
-function BudgetCard({
-  budget,
-  onEdit,
-  onDelete,
-  onCopy,
-}: {
-  budget: BudgetResponse;
-  onEdit: () => void;
-  onDelete: () => void;
-  onCopy: () => void;
-}) {
-  const pct = Math.min(budget.percentage_used, 100);
-  const isOverBudget = parseFloat(budget.total_spent) > parseFloat(budget.total_allocated);
-
+function StatCard({ title, value, valueClass }: { title: string; value: string; valueClass?: string }) {
   return (
     <Card>
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h2 className="font-semibold text-base truncate">{budget.budget_name}</h2>
-              {budget.is_active && (
-                <Badge variant="default" className="shrink-0 text-xs">
-                  Active
-                </Badge>
-              )}
-            </div>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              {formatDate(budget.start_date)} – {formatDate(budget.end_date)}
-            </p>
-          </div>
-          <div className="flex items-center gap-1 shrink-0">
-            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={onCopy} title="Copy">
-              <Copy className="h-3.5 w-3.5" />
-            </Button>
-            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={onEdit} title="Edit">
-              <Pencil className="h-3.5 w-3.5" />
-            </Button>
-            <Button
-              size="icon"
-              variant="ghost"
-              className="h-7 w-7 text-destructive hover:text-destructive"
-              onClick={onDelete}
-              title="Delete"
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-            </Button>
-          </div>
-        </div>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-3">
-        {/* Overall progress */}
-        <div className="space-y-1.5">
-          <div className="flex justify-between text-sm">
-            <span className={cn('font-medium', isOverBudget && 'text-destructive')}>
-              {formatCurrency(budget.total_spent)} spent
-            </span>
-            <span className="text-muted-foreground">
-              of {formatCurrency(budget.total_allocated)}
-            </span>
-          </div>
-          <div className="h-2 rounded-full bg-muted overflow-hidden">
-            <div
-              className={cn(
-                'h-full rounded-full transition-all',
-                isOverBudget ? 'bg-destructive' : 'bg-primary',
-              )}
-              style={{ width: `${pct}%` }}
-            />
-          </div>
-          <div className="flex justify-between text-xs text-muted-foreground">
-            <span>{budget.percentage_used.toFixed(0)}% used</span>
-            <span
-              className={cn(
-                parseFloat(budget.total_remaining) < 0 && 'text-destructive font-medium',
-              )}
-            >
-              {parseFloat(budget.total_remaining) >= 0
-                ? `${formatCurrency(budget.total_remaining)} remaining`
-                : `${formatCurrency(Math.abs(parseFloat(budget.total_remaining)).toString())} over budget`}
-            </span>
-          </div>
-        </div>
-
-        {/* Category allocations */}
-        {budget.budget_categories.length > 0 && (
-          <div className="space-y-1 pt-1 border-t">
-            {budget.budget_categories.slice(0, 5).map((bc) => (
-              <div key={bc.id} className="flex justify-between text-xs">
-                <span className="truncate text-muted-foreground">{bc.category.name}</span>
-                <span className="shrink-0 ml-2 tabular-nums">
-                  {formatCurrency(bc.allocated_amount)}
-                </span>
-              </div>
-            ))}
-            {budget.budget_categories.length > 5 && (
-              <p className="text-xs text-muted-foreground pt-0.5">
-                +{budget.budget_categories.length - 5} more
-              </p>
-            )}
-          </div>
-        )}
-
-        {/* Link to detail */}
-        <div className="pt-1">
-          <Link
-            to={`/budgets/${budget.id}`}
-            className="text-xs text-primary flex items-center gap-1 hover:underline"
-          >
-            View full breakdown <ArrowRight className="h-3 w-3" />
-          </Link>
-        </div>
+      <CardContent>
+        <p className={`text-2xl font-bold ${valueClass ?? ''}`}>{value}</p>
       </CardContent>
     </Card>
   );
 }
 
+function progressColor(pct: number) {
+  if (pct > 100) return 'bg-red-500';
+  if (pct > 80) return 'bg-yellow-500';
+  return 'bg-primary';
+}
+
+function isOverBudget(status: string) {
+  return status === 'over_budget';
+}
+
+function progressTextColor(status: string) {
+  return isOverBudget(status) ? 'text-red-600 font-medium' : '';
+}
+
 export function BudgetsPage() {
-  const { data: budgets, isLoading, isError } = useBudgets();
+  const now = new Date();
+  const [year, setYear] = useState(now.getFullYear());
+  const [month, setMonth] = useState(now.getMonth() + 1); // 1-indexed
 
-  const [formOpen, setFormOpen] = useState(false);
-  const [editBudget, setEditBudget] = useState<BudgetResponse | undefined>();
-  const [deleteTarget, setDeleteTarget] = useState<BudgetResponse | null>(null);
-  const [copyTarget, setCopyTarget] = useState<BudgetResponse | null>(null);
+  const { data: budgetMonth, isLoading: monthLoading } = useBudgetMonth(year, month);
+  const { data: performance } = useBudgetMonthPerformance(year, month);
+  const { data: templates } = useTemplates();
+  const assignTemplate = useAssignTemplate();
 
-  function openCreate() {
-    setEditBudget(undefined);
-    setFormOpen(true);
+  // Transaction stats for the selected month — used to compute uncovered spending
+  const dateFrom = `${year}-${String(month).padStart(2, '0')}-01`;
+  const lastDay = new Date(year, month, 0).getDate();
+  const dateTo = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+  const { data: txnStats } = useTransactionStats({ date_from: dateFrom, date_to: dateTo });
+
+  const isCurrentMonth = year === now.getFullYear() && month === now.getMonth() + 1;
+
+  function goPrev() {
+    if (month === 1) {
+      setYear((y) => y - 1);
+      setMonth(12);
+    } else {
+      setMonth((m) => m - 1);
+    }
   }
 
-  function openEdit(b: BudgetResponse) {
-    setEditBudget(b);
-    setFormOpen(true);
+  function goNext() {
+    if (isCurrentMonth) return;
+    if (month === 12) {
+      setYear((y) => y + 1);
+      setMonth(1);
+    } else {
+      setMonth((m) => m + 1);
+    }
   }
 
-  // Sort: active first, then by start_date descending
-  const sorted = [...(budgets ?? [])].sort((a, b) => {
-    if (a.is_active !== b.is_active) return a.is_active ? -1 : 1;
-    return b.start_date.localeCompare(a.start_date);
-  });
+  function handleTemplateChange(value: string) {
+    assignTemplate.mutate({
+      year,
+      month,
+      data: { template_uuid: value === 'none' ? null : value },
+    });
+  }
+
+  // Group performance items: parent categories with their subcategories
+  const grouped = useMemo(() => {
+    if (!performance) return [];
+    const parents: (BudgetPerformanceItem & { children: BudgetPerformanceItem[] })[] = [];
+    const childMap = new Map<string, BudgetPerformanceItem[]>();
+
+    for (const item of performance) {
+      if (item.subcategory_uuid) {
+        const existing = childMap.get(item.category_uuid) ?? [];
+        existing.push(item);
+        childMap.set(item.category_uuid, existing);
+      } else {
+        parents.push({ ...item, children: [] });
+      }
+    }
+
+    for (const parent of parents) {
+      parent.children = childMap.get(parent.category_uuid) ?? [];
+    }
+
+    // Items that are subcategories with no parent row — show standalone
+    const parentUuids = new Set(parents.map((p) => p.category_uuid));
+    for (const [catUuid, children] of childMap) {
+      if (!parentUuids.has(catUuid)) {
+        for (const child of children) {
+          parents.push({ ...child, children: [] });
+        }
+      }
+    }
+
+    return parents;
+  }, [performance]);
+
+  // Year range for picker: 5 years back to current year
+  const pickerYears = Array.from({ length: 6 }, (_, i) => now.getFullYear() - 5 + i);
 
   return (
-    <div className="flex flex-col gap-6 p-6">
+    <div className="p-6 space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold">Budgets</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Track spending against category allocations.
-          </p>
-        </div>
-        <Button size="sm" onClick={openCreate}>
-          <Plus className="mr-1 h-4 w-4" />
-          New Budget
+        <h1 className="text-2xl font-bold">Budget</h1>
+        <Button variant="outline" asChild>
+          <Link to="/budgets/templates">
+            <Settings2 className="h-4 w-4 mr-2" />
+            Manage Templates
+          </Link>
         </Button>
       </div>
 
-      {isLoading ? (
-        <p className="text-sm text-muted-foreground">Loading budgets...</p>
-      ) : isError ? (
-        <p className="text-sm text-destructive">
-          Failed to load budgets. Make sure the API is running at{' '}
-          <code className="font-mono">http://localhost:8000</code>.
-        </p>
-      ) : !sorted.length ? (
-        <p className="text-sm text-muted-foreground">
-          No budgets yet. Create one to start tracking spending.
-        </p>
-      ) : (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {sorted.map((b) => (
-            <BudgetCard
-              key={b.id}
-              budget={b}
-              onEdit={() => openEdit(b)}
-              onDelete={() => setDeleteTarget(b)}
-              onCopy={() => setCopyTarget(b)}
+      {/* Month Navigation */}
+      <div className="flex items-center justify-center gap-2">
+        <Button variant="ghost" size="icon" onClick={goPrev}>
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" className="min-w-48 font-semibold">
+              {MONTH_NAMES[month - 1]} {year}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-64 p-4 space-y-3">
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">Year</label>
+              <Select
+                value={String(year)}
+                onValueChange={(v) => {
+                  const newYear = Number(v);
+                  // Clamp month if jumping to current year and month is in the future
+                  const maxMonth = newYear === now.getFullYear() ? now.getMonth() + 1 : 12;
+                  setYear(newYear);
+                  setMonth((m) => Math.min(m, maxMonth));
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {pickerYears.map((y) => (
+                    <SelectItem key={y} value={String(y)}>
+                      {y}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">Month</label>
+              <Select value={String(month)} onValueChange={(v) => setMonth(Number(v))}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {MONTH_NAMES.map((name, i) => {
+                    const m = i + 1;
+                    const isFuture = year === now.getFullYear() && m > now.getMonth() + 1;
+                    return (
+                      <SelectItem key={m} value={String(m)} disabled={isFuture}>
+                        {name}
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+          </PopoverContent>
+        </Popover>
+
+        <Button variant="ghost" size="icon" onClick={goNext} disabled={isCurrentMonth}>
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+      </div>
+
+      {/* Template Assignment */}
+      <div className="flex items-center gap-3">
+        <label className="text-sm font-medium">Template:</label>
+        <Select
+          value={budgetMonth?.template?.id ?? 'none'}
+          onValueChange={handleTemplateChange}
+          disabled={assignTemplate.isPending}
+        >
+          <SelectTrigger className="w-64">
+            <SelectValue placeholder="Select template" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none">No template</SelectItem>
+            {(templates ?? []).map((t) => (
+              <SelectItem key={t.id} value={t.id}>
+                {t.template_name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {assignTemplate.isPending && (
+          <span className="text-xs text-muted-foreground">Updating...</span>
+        )}
+      </div>
+
+      {monthLoading && <p className="text-sm text-muted-foreground">Loading...</p>}
+
+      {/* Stats Cards — computed from top-level performance items */}
+      {performance && performance.length > 0 && (() => {
+        // Only sum parent-level items (no subcategory) to avoid double-counting
+        const topLevel = performance.filter((p) => !p.subcategory_uuid);
+        const totalAllocated = topLevel.reduce((s, p) => s + parseFloat(p.allocated_amount), 0);
+        const totalSpent = topLevel.reduce((s, p) => s + parseFloat(p.spent_amount), 0);
+        const totalRemaining = totalAllocated - totalSpent;
+        const pctUsed = totalAllocated > 0 ? (totalSpent / totalAllocated) * 100 : 0;
+        return (
+          <div className="grid grid-cols-4 gap-4">
+            <StatCard title="Total Allocated" value={formatCurrency(String(totalAllocated))} />
+            <StatCard
+              title="Total Spent"
+              value={formatCurrency(String(totalSpent))}
+              valueClass="text-red-600"
             />
-          ))}
-        </div>
+            <StatCard
+              title="Remaining"
+              value={formatCurrency(String(totalRemaining))}
+              valueClass={totalRemaining >= 0 ? 'text-green-600' : 'text-red-600'}
+            />
+            <StatCard
+              title="% Used"
+              value={`${pctUsed.toFixed(1)}%`}
+              valueClass={pctUsed > 100 ? 'text-red-600' : ''}
+            />
+          </div>
+        );
+      })()}
+
+      {/* No Template State */}
+      {!monthLoading && !budgetMonth?.template && (
+        <Card>
+          <CardContent className="py-8 text-center">
+            <p className="text-muted-foreground">
+              No template assigned to this month.{' '}
+              <Link to="/budgets/templates" className="text-primary underline">
+                Create a template
+              </Link>{' '}
+              or select one above.
+            </p>
+          </CardContent>
+        </Card>
       )}
 
-      <BudgetFormDialog
-        open={formOpen}
-        onOpenChange={setFormOpen}
-        budget={editBudget}
-      />
-      <DeleteBudgetDialog
-        open={!!deleteTarget}
-        onOpenChange={(o) => { if (!o) setDeleteTarget(null); }}
-        budget={deleteTarget}
-      />
-      <CopyBudgetDialog
-        open={!!copyTarget}
-        onOpenChange={(o) => { if (!o) setCopyTarget(null); }}
-        budget={copyTarget}
-      />
+      {/* Performance Breakdown */}
+      {grouped.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Category Breakdown</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {grouped.map((item) => {
+              const pct = Math.min(100, item.percentage_used ?? 0);
+              const displayPct = item.percentage_used ?? 0;
+              return (
+                <div key={`${item.category_uuid}-${item.subcategory_uuid ?? 'parent'}`}>
+                  {/* Parent row */}
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between text-sm">
+                      <span className="font-medium">
+                        {item.subcategory_name
+                          ? `${item.category_name} > ${item.subcategory_name}`
+                          : item.category_name}
+                      </span>
+                      <span className={`tabular-nums ${progressTextColor(item.status)}`}>
+                        {formatCurrency(item.spent_amount)} / {formatCurrency(item.allocated_amount)}
+                        <span className="text-muted-foreground ml-1">
+                          ({displayPct.toFixed(0)}%)
+                        </span>
+                      </span>
+                    </div>
+                    <div className="h-2 w-full rounded-full bg-secondary">
+                      <div
+                        className={`h-2 rounded-full transition-all ${progressColor(displayPct)}`}
+                        style={{ width: `${Math.min(pct, 100)}%` }}
+                      />
+                    </div>
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>Remaining: {formatCurrency(item.remaining_amount)}</span>
+                    </div>
+                  </div>
+
+                  {/* Subcategory rows */}
+                  {item.children.length > 0 && (
+                    <div className="ml-4 mt-2 space-y-2 border-l-2 pl-4">
+                      {item.children.map((sub) => {
+                        const subPct = Math.min(100, sub.percentage_used ?? 0);
+                        const subDisplayPct = sub.percentage_used ?? 0;
+                        return (
+                          <div key={`${sub.category_uuid}-${sub.subcategory_uuid}`} className="space-y-1">
+                            <div className="flex justify-between text-xs">
+                              <span className="text-muted-foreground">
+                                {sub.subcategory_name ?? sub.category_name}
+                              </span>
+                              <span className={`tabular-nums ${progressTextColor(sub.status)}`}>
+                                {formatCurrency(sub.spent_amount)} / {formatCurrency(sub.allocated_amount)}
+                                <span className="text-muted-foreground ml-1">
+                                  ({subDisplayPct.toFixed(0)}%)
+                                </span>
+                              </span>
+                            </div>
+                            <div className="h-1.5 w-full rounded-full bg-secondary">
+                              <div
+                                className={`h-1.5 rounded-full transition-all ${progressColor(subDisplayPct)}`}
+                                style={{ width: `${Math.min(subPct, 100)}%` }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+
+                      {/* Unallocated remainder */}
+                      {(() => {
+                        const parentAmt = parseFloat(item.allocated_amount);
+                        const subSum = item.children.reduce(
+                          (s, c) => s + parseFloat(c.allocated_amount),
+                          0,
+                        );
+                        const unallocated = parentAmt - subSum;
+                        if (unallocated > 0.005) {
+                          return (
+                            <div className="flex justify-between text-xs text-muted-foreground italic">
+                              <span>Unallocated</span>
+                              <span className="tabular-nums">{formatCurrency(String(unallocated))}</span>
+                            </div>
+                          );
+                        }
+                        return null;
+                      })()}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Uncovered spending — transactions not matched by any budget category */}
+      {txnStats && performance && budgetMonth?.template && (() => {
+        const totalMonthExpenses = parseFloat(txnStats.total_expenses);
+        const budgetedSpent = performance
+          .filter((p) => !p.subcategory_uuid)
+          .reduce((s, p) => s + parseFloat(p.spent_amount), 0);
+        const uncovered = totalMonthExpenses - budgetedSpent;
+        if (uncovered < 0.01) return null;
+        return (
+          <div className="flex items-center justify-between rounded-md border px-4 py-3 text-sm">
+            <span className="text-muted-foreground">
+              Spending outside budgeted categories
+            </span>
+            <span className="font-medium tabular-nums text-amber-600">
+              {formatCurrency(String(uncovered))}
+            </span>
+          </div>
+        );
+      })()}
     </div>
   );
 }
