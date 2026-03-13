@@ -2,18 +2,7 @@
 
 ## Open Items
 
-Based on completed backend todos (Phases 1-5) and existing gaps:
-
-| # | Item | Backend Source | Size |
-|---|------|---------------|------|
-| 20 | Monthly average analytics page | Backend 09 (analytics endpoint) | Medium-Large |
-
-### Recommended Execution Order
-
-```
-Phase A — Analytics page (20)
-  New page, no existing UI to replace. Good standalone task.
-```
+No open items.
 
 ## Completed Items
 
@@ -37,4 +26,5 @@ Phase A — Analytics page (20)
 | 16 | Snapshot edit dialog | `d971412` |
 | 13 | Verify: snapshot recalc on delete (no frontend change needed) | n/a |
 | 14 | Verify: amortization category inheritance (no frontend change needed) | n/a |
-| 19 | Budget template system | (full rebuild) |
+| 19 | Budget template system | `fb31423` |
+| 20 | Monthly average analytics page | `08b28fd` |
