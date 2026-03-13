@@ -10,6 +10,7 @@ import {
   CalendarRange,
   Upload,
   LineChart,
+  BarChart3,
   Tag,
   FolderOpen,
   Settings,
@@ -30,6 +31,7 @@ const primaryNav = [
   { to: '/plans', label: 'Plans', icon: CalendarRange },
   { to: '/uploads', label: 'Uploads', icon: Upload },
   { to: '/net-worth', label: 'Net Worth', icon: LineChart },
+  { to: '/analytics', label: 'Analytics', icon: BarChart3 },
 ];
 
 const utilityNav = [

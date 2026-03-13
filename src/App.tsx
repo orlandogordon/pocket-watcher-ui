@@ -16,6 +16,7 @@ import { DebtDetailPage } from '@/pages/DebtDetailPage';
 import { PlansPage } from '@/pages/PlansPage';
 import { PlanDetailPage } from '@/pages/PlanDetailPage';
 import { NetWorthPage } from '@/pages/NetWorthPage';
+import { AnalyticsPage } from '@/pages/AnalyticsPage';
 import { AdminPage } from '@/pages/AdminPage';
 
 export default function App() {
@@ -39,6 +40,7 @@ export default function App() {
           <Route path="plans" element={<PlansPage />} />
           <Route path="plans/:uuid" element={<PlanDetailPage />} />
           <Route path="net-worth" element={<NetWorthPage />} />
+          <Route path="analytics" element={<AnalyticsPage />} />
           <Route path="admin" element={<AdminPage />} />
         </Route>
       </Routes>
