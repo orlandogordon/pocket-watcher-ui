@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { format, parseISO } from 'date-fns';
-import { Plus, Pencil, Trash2, X, Tag, Scissors, CalendarRange, Link2, MoreHorizontal } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, Tag, Scissors, CalendarRange, Link2, MoreHorizontal, ChevronUp, ChevronDown } from 'lucide-react';
 import { useTransactions, useTransactionStats } from '@/hooks/useTransactions';
 import { useAccounts } from '@/hooks/useAccounts';
 import { useCategories } from '@/hooks/useCategories';
@@ -77,13 +77,15 @@ export function TransactionsPage() {
   const [splitTarget, setSplitTarget] = useState<TransactionResponse | null>(null);
   const [amortizeTarget, setAmortizeTarget] = useState<TransactionResponse | null>(null);
   const [relationshipTarget, setRelationshipTarget] = useState<TransactionResponse | null>(null);
+  const [sortBy, setSortBy] = useState('transaction_date');
+  const [sortDesc, setSortDesc] = useState(true);
 
   const activeFilters: TransactionFilters = {
     ...filters,
     skip: page * LIMIT,
     limit: LIMIT,
-    order_by: 'transaction_date',
-    order_desc: true,
+    order_by: sortBy,
+    order_desc: sortDesc,
   };
 
   const { data: transactions, isLoading, isError } = useTransactions(activeFilters);
@@ -126,6 +128,25 @@ export function TransactionsPage() {
   function openEdit(tx: TransactionResponse) {
     setEditTarget(tx);
     setFormOpen(true);
+  }
+
+  function toggleSort(column: string) {
+    if (sortBy === column) {
+      setSortDesc((d) => !d);
+    } else {
+      setSortBy(column);
+      setSortDesc(true);
+    }
+    setPage(0);
+  }
+
+  function SortIcon({ column }: { column: string }) {
+    if (sortBy !== column) return null;
+    return sortDesc ? (
+      <ChevronDown className="ml-1 inline h-3.5 w-3.5" />
+    ) : (
+      <ChevronUp className="ml-1 inline h-3.5 w-3.5" />
+    );
   }
 
   const net = stats ? parseFloat(stats.net) : 0;
@@ -328,15 +349,29 @@ export function TransactionsPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Date</TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead>Merchant</TableHead>
-                <TableHead>Account</TableHead>
-                <TableHead>Category</TableHead>
+                <TableHead className="cursor-pointer select-none" onClick={() => toggleSort('transaction_date')}>
+                  Date<SortIcon column="transaction_date" />
+                </TableHead>
+                <TableHead className="cursor-pointer select-none" onClick={() => toggleSort('description')}>
+                  Description<SortIcon column="description" />
+                </TableHead>
+                <TableHead className="cursor-pointer select-none" onClick={() => toggleSort('merchant_name')}>
+                  Merchant<SortIcon column="merchant_name" />
+                </TableHead>
+                <TableHead className="cursor-pointer select-none" onClick={() => toggleSort('account_uuid')}>
+                  Account<SortIcon column="account_uuid" />
+                </TableHead>
+                <TableHead className="cursor-pointer select-none" onClick={() => toggleSort('category_uuid')}>
+                  Category<SortIcon column="category_uuid" />
+                </TableHead>
                 <TableHead>Subcategory</TableHead>
                 <TableHead>Tags</TableHead>
-                <TableHead className="text-right">Amount</TableHead>
-                <TableHead>Type</TableHead>
+                <TableHead className="cursor-pointer select-none text-right" onClick={() => toggleSort('amount')}>
+                  Amount<SortIcon column="amount" />
+                </TableHead>
+                <TableHead className="cursor-pointer select-none" onClick={() => toggleSort('transaction_type')}>
+                  Type<SortIcon column="transaction_type" />
+                </TableHead>
                 <TableHead>Source</TableHead>
                 <TableHead>Comments</TableHead>
                 <TableHead className="w-[80px]" />
@@ -350,11 +385,11 @@ export function TransactionsPage() {
                     <TableCell className="whitespace-nowrap text-sm">
                       {format(parseISO(tx.transaction_date), 'MMM d, yyyy')}
                     </TableCell>
-                    <TableCell className="max-w-[200px] truncate">{tx.description}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
+                    <TableCell className="max-w-[200px] truncate" title={tx.description}>{tx.description}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground" title={tx.merchant_name ?? undefined}>
                       {tx.merchant_name ?? '—'}
                     </TableCell>
-                    <TableCell className="text-sm">
+                    <TableCell className="text-sm" title={accountMap.get(tx.account_uuid) ?? undefined}>
                       {accountMap.get(tx.account_uuid) ?? '—'}
                     </TableCell>
                     <TableCell className="text-sm">
