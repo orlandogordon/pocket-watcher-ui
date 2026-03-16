@@ -26,7 +26,13 @@ interface PreviewSessionProps {
 function buildEditedData(edits: RowEdits): Record<string, unknown> {
   const edited_data: Record<string, unknown> = {};
   if (edits.description) edited_data.description = edits.description;
-  if (edits.amount) edited_data.amount = edits.amount;
+  if (edits.amount) {
+    if (edits.transaction_kind === 'investment') {
+      edited_data.total_amount = edits.amount;
+    } else {
+      edited_data.amount = edits.amount;
+    }
+  }
   if (edits.transaction_type) edited_data.transaction_type = edits.transaction_type;
   if (edits.transaction_date) edited_data.transaction_date = edits.transaction_date;
   if (edits.merchant_name) edited_data.merchant_name = edits.merchant_name;
@@ -34,6 +40,10 @@ function buildEditedData(edits: RowEdits): Record<string, unknown> {
   if (edits.subcategory_uuid) edited_data.subcategory_uuid = edits.subcategory_uuid;
   if (edits.tag_uuids.length > 0) edited_data.tag_uuids = edits.tag_uuids;
   if (edits.comments) edited_data.comments = edits.comments;
+  if (edits.symbol) edited_data.symbol = edits.symbol;
+  if (edits.security_type) edited_data.security_type = edits.security_type;
+  if (edits.quantity) edited_data.quantity = edits.quantity;
+  if (edits.price_per_share) edited_data.price_per_share = edits.price_per_share;
   return edited_data;
 }
 

@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { format, parseISO } from 'date-fns';
-import { ArrowLeft, Plus, Pencil, Trash2, X } from 'lucide-react';
+import { ArrowLeft, Plus, Pencil, Trash2, X, ChevronUp, ChevronDown } from 'lucide-react';
 import { useAccounts } from '@/hooks/useAccounts';
 import {
   useInvestmentHoldings,
@@ -46,6 +46,29 @@ const TX_TYPE_COLORS: Record<InvestmentTransactionType, string> = {
   OTHER: 'bg-gray-100 text-gray-800',
 };
 
+
+/** Parse an OCC option symbol into a human-readable label.
+ *  Format: SYMBOL + YYMMDD + C/P + 00000000 (strike * 1000)
+ *  e.g. "JPM240816C00200000" → "$200 Call 08/16/24"
+ *  Returns null if the symbol doesn't match the OCC pattern. */
+function formatOptionSymbol(apiSymbol: string): string | null {
+  const match = apiSymbol.match(/^(.+?)(\d{6})([CP])(\d{8})$/);
+  if (!match) return null;
+  const [, , dateStr, callPut, strikeStr] = match;
+  const yy = dateStr.slice(0, 2);
+  const mm = dateStr.slice(2, 4);
+  const dd = dateStr.slice(4, 6);
+  const strike = parseInt(strikeStr, 10) / 1000;
+  const strikeLabel = strike % 1 === 0 ? `$${strike}` : `$${strike.toFixed(2)}`;
+  const typeLabel = callPut === 'C' ? 'Call' : 'Put';
+  return `${strikeLabel} ${typeLabel} ${mm}/${dd}/${yy}`;
+}
+
+function getSalePL(tx: InvestmentTransactionResponse): number {
+  if (tx.transaction_type !== 'SELL' || !tx.cost_basis_at_sale || !tx.price_per_share || !tx.quantity) return 0;
+  return (parseFloat(tx.price_per_share) - parseFloat(tx.cost_basis_at_sale)) * parseFloat(tx.quantity);
+}
+
 export function InvestmentDetailPage() {
   const { accountUuid } = useParams<{ accountUuid: string }>();
   const { data: accounts } = useAccounts();
@@ -66,6 +89,29 @@ export function InvestmentDetailPage() {
   const [txPage, setTxPage] = useState(0);
   const [txPageSize, setTxPageSize] = useState(25);
 
+  // Sort state
+  const [sortBy, setSortBy] = useState('transaction_date');
+  const [sortDesc, setSortDesc] = useState(true);
+
+  function toggleSort(column: string) {
+    if (sortBy === column) {
+      setSortDesc((d) => !d);
+    } else {
+      setSortBy(column);
+      setSortDesc(true);
+    }
+    setTxPage(0);
+  }
+
+  function SortIcon({ column }: { column: string }) {
+    if (sortBy !== column) return null;
+    return sortDesc ? (
+      <ChevronDown className="ml-1 inline h-3.5 w-3.5" />
+    ) : (
+      <ChevronUp className="ml-1 inline h-3.5 w-3.5" />
+    );
+  }
+
   const txSymbols = useMemo(() => {
     const set = new Set<string>();
     for (const tx of transactions ?? []) {
@@ -76,7 +122,7 @@ export function InvestmentDetailPage() {
 
   const filteredTransactions = useMemo(() => {
     if (!transactions) return [];
-    return transactions.filter((tx) => {
+    const filtered = transactions.filter((tx) => {
       if (filterType !== 'all' && tx.transaction_type !== filterType) return false;
       if (filterSymbol !== 'all' && tx.symbol !== filterSymbol) return false;
       const txDate = tx.transaction_date.slice(0, 10);
@@ -84,7 +130,42 @@ export function InvestmentDetailPage() {
       if (filterDateTo && txDate > filterDateTo) return false;
       return true;
     });
-  }, [transactions, filterType, filterSymbol, filterDateFrom, filterDateTo]);
+
+    filtered.sort((a, b) => {
+      let cmp = 0;
+      switch (sortBy) {
+        case 'transaction_date':
+          cmp = a.transaction_date.localeCompare(b.transaction_date);
+          break;
+        case 'transaction_type':
+          cmp = a.transaction_type.localeCompare(b.transaction_type);
+          break;
+        case 'symbol':
+          cmp = (a.symbol ?? '').localeCompare(b.symbol ?? '');
+          break;
+        case 'security_type':
+          cmp = (a.security_type ?? '').localeCompare(b.security_type ?? '');
+          break;
+        case 'price_per_share':
+          cmp = parseFloat(a.price_per_share ?? '0') - parseFloat(b.price_per_share ?? '0');
+          break;
+        case 'total_amount':
+          cmp = parseFloat(a.total_amount) - parseFloat(b.total_amount);
+          break;
+        case 'sale_pl': {
+          const plA = getSalePL(a);
+          const plB = getSalePL(b);
+          cmp = plA - plB;
+          break;
+        }
+        default:
+          cmp = 0;
+      }
+      return sortDesc ? -cmp : cmp;
+    });
+
+    return filtered;
+  }, [transactions, filterType, filterSymbol, filterDateFrom, filterDateTo, sortBy, sortDesc]);
 
   // Reset to first page when filters change
   const filterKey = `${filterType}|${filterSymbol}|${filterDateFrom}|${filterDateTo}`;
@@ -147,6 +228,7 @@ export function InvestmentDetailPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Symbol</TableHead>
+                  <TableHead>Type</TableHead>
                   <TableHead className="text-right">Qty</TableHead>
                   <TableHead className="text-right">Avg Cost</TableHead>
                   <TableHead className="text-right">Price</TableHead>
@@ -168,7 +250,17 @@ export function InvestmentDetailPage() {
 
                   return (
                     <TableRow key={h.id}>
-                      <TableCell className="font-medium">{h.symbol}</TableCell>
+                      <TableCell className="font-medium">
+                        <div className="flex flex-col">
+                          {h.symbol}
+                          {h.api_symbol && h.api_symbol !== h.symbol && (
+                            <span className="text-xs text-muted-foreground" title={h.api_symbol}>{formatOptionSymbol(h.api_symbol) ?? h.api_symbol}</span>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {h.security_type ?? '—'}
+                      </TableCell>
                       <TableCell className="text-right tabular-nums">{qty}</TableCell>
                       <TableCell className="text-right tabular-nums">
                         {formatCurrency(cost.toString())}
@@ -223,6 +315,7 @@ export function InvestmentDetailPage() {
                   <TableFooter>
                     <TableRow className="font-semibold">
                       <TableCell>Total</TableCell>
+                      <TableCell />
                       <TableCell />
                       <TableCell />
                       <TableCell />
@@ -351,13 +444,28 @@ export function InvestmentDetailPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Symbol</TableHead>
+                  <TableHead className="cursor-pointer select-none" onClick={() => toggleSort('transaction_date')}>
+                    Date<SortIcon column="transaction_date" />
+                  </TableHead>
+                  <TableHead className="cursor-pointer select-none" onClick={() => toggleSort('transaction_type')}>
+                    Type<SortIcon column="transaction_type" />
+                  </TableHead>
+                  <TableHead className="cursor-pointer select-none" onClick={() => toggleSort('symbol')}>
+                    Symbol<SortIcon column="symbol" />
+                  </TableHead>
+                  <TableHead className="cursor-pointer select-none" onClick={() => toggleSort('security_type')}>
+                    Security<SortIcon column="security_type" />
+                  </TableHead>
                   <TableHead className="text-right">Qty</TableHead>
-                  <TableHead className="text-right">Price/Share</TableHead>
-                  <TableHead className="text-right">Total</TableHead>
-                  <TableHead className="text-right">Sale P&L</TableHead>
+                  <TableHead className="cursor-pointer select-none text-right" onClick={() => toggleSort('price_per_share')}>
+                    Price/Share<SortIcon column="price_per_share" />
+                  </TableHead>
+                  <TableHead className="cursor-pointer select-none text-right" onClick={() => toggleSort('total_amount')}>
+                    Total<SortIcon column="total_amount" />
+                  </TableHead>
+                  <TableHead className="cursor-pointer select-none text-right" onClick={() => toggleSort('sale_pl')}>
+                    Sale P&L<SortIcon column="sale_pl" />
+                  </TableHead>
                   <TableHead>Description</TableHead>
                   <TableHead className="w-[80px]" />
                 </TableRow>
@@ -376,39 +484,44 @@ export function InvestmentDetailPage() {
                         {tx.transaction_type}
                       </Badge>
                     </TableCell>
-                    <TableCell className="font-medium">
-                      {tx.symbol ?? '—'}
+                    <TableCell className="font-medium" title={tx.api_symbol && tx.api_symbol !== tx.symbol ? `${tx.symbol} (${tx.api_symbol})` : tx.symbol ?? undefined}>
+                      <div className="flex flex-col">
+                        {tx.symbol ?? '—'}
+                        {tx.api_symbol && tx.api_symbol !== tx.symbol && (
+                          <span className="text-xs text-muted-foreground" title={tx.api_symbol}>{formatOptionSymbol(tx.api_symbol) ?? tx.api_symbol}</span>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground" title={tx.security_type ?? undefined}>
+                      {tx.security_type ?? '—'}
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
                       {tx.quantity ?? '—'}
                     </TableCell>
-                    <TableCell className="text-right tabular-nums">
+                    <TableCell className="text-right tabular-nums" title={tx.price_per_share ?? undefined}>
                       {tx.price_per_share
                         ? formatCurrency(tx.price_per_share)
                         : '—'}
                     </TableCell>
-                    <TableCell className="text-right tabular-nums font-medium">
+                    <TableCell className="text-right tabular-nums font-medium" title={tx.total_amount}>
                       {formatCurrency(tx.total_amount)}
                     </TableCell>
                     <TableCell className="text-right tabular-nums text-sm">
                       {(() => {
+                        const pl = getSalePL(tx);
                         if (tx.transaction_type !== 'SELL' || !tx.cost_basis_at_sale || !tx.price_per_share || !tx.quantity) return '—';
-                        const price = parseFloat(tx.price_per_share);
                         const cost = parseFloat(tx.cost_basis_at_sale);
-                        const qty = parseFloat(tx.quantity);
-                        const gainPerShare = price - cost;
-                        const totalGain = gainPerShare * qty;
-                        const pct = cost !== 0 ? (gainPerShare / cost) * 100 : 0;
+                        const pct = cost !== 0 ? ((parseFloat(tx.price_per_share) - cost) / cost) * 100 : 0;
                         return (
-                          <span className={totalGain > 0 ? 'text-green-600' : totalGain < 0 ? 'text-red-500' : ''}>
-                            {totalGain >= 0 ? '+' : ''}{formatCurrency(totalGain.toString())}
+                          <span className={pl > 0 ? 'text-green-600' : pl < 0 ? 'text-red-500' : ''}>
+                            {pl >= 0 ? '+' : ''}{formatCurrency(pl.toString())}
                             {' '}
                             <span className="text-xs">({pct >= 0 ? '+' : ''}{pct.toFixed(1)}%)</span>
                           </span>
                         );
                       })()}
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground max-w-[200px] truncate">
+                    <TableCell className="text-sm text-muted-foreground max-w-[200px] truncate" title={tx.description ?? undefined}>
                       {tx.description ?? '—'}
                     </TableCell>
                     <TableCell>

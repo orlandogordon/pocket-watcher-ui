@@ -24,7 +24,7 @@ import { useTags } from '@/hooks/useTags';
 import type { CategoryResponse } from '@/types/categories';
 import type { TagResponse } from '@/types/transactions';
 import type { PreviewItem } from '@/types/uploads';
-import { useRowEdits, TagsCell, TX_TYPES, type RowEdits } from './PendingReviewTable';
+import { useRowEdits, isInvestmentItem, TagsCell, TX_TYPES, SECURITY_TYPES, type RowEdits } from './PendingReviewTable';
 
 interface ReadyToImportTableProps {
   items: PreviewItem[];
@@ -36,7 +36,7 @@ interface ReadyToImportTableProps {
 }
 
 function ReadyRow({
-  item, onMoveToReview, onEditSave, isPending, pendingTempId, selected, onToggleSelect, categories, categoryMap, allTags,
+  item, onMoveToReview, onEditSave, isPending, pendingTempId, selected, onToggleSelect, categories, categoryMap, allTags, showInvestmentCols, showRegularCols,
 }: {
   item: PreviewItem;
   onMoveToReview: (tempId: string) => void;
@@ -48,6 +48,8 @@ function ReadyRow({
   categories: CategoryResponse[];
   categoryMap: Map<string, CategoryResponse>;
   allTags: TagResponse[];
+  showInvestmentCols: boolean;
+  showRegularCols: boolean;
 }) {
   const {
     edits,
@@ -60,6 +62,11 @@ function ReadyRow({
     subcategoryUuid, setSubcategoryUuid,
     tagUuids, toggleTag,
     comments, setComments,
+    symbol, setSymbol,
+    securityType, setSecurityType,
+    quantity, setQuantity,
+    pricePerShare, setPricePerShare,
+    isInvestment,
   } = useRowEdits(item);
 
   const isThisRowPending = pendingTempId === item.temp_id;
@@ -123,6 +130,53 @@ function ReadyRow({
           disabled={disabled}
         />
       </TableCell>
+      {/* Investment columns */}
+      {showInvestmentCols && (
+        <>
+          <TableCell>
+            <Input
+              value={symbol}
+              onChange={(e) => setSymbol(e.target.value)}
+              onBlur={() => saveEdits()}
+              className="h-7 text-xs w-20"
+              disabled={disabled || !isInvestment}
+              placeholder={isInvestment ? 'Symbol' : ''}
+            />
+          </TableCell>
+          <TableCell>
+            <Select value={securityType} onValueChange={(val) => { setSecurityType(val); saveEdits({ security_type: val }); }} disabled={disabled || !isInvestment}>
+              <SelectTrigger className="h-7 text-xs w-28">
+                <SelectValue placeholder="Security" />
+              </SelectTrigger>
+              <SelectContent>
+                {SECURITY_TYPES.map((t) => (
+                  <SelectItem key={t} value={t} className="text-xs">{t}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </TableCell>
+          <TableCell>
+            <Input
+              value={quantity}
+              onChange={(e) => setQuantity(e.target.value)}
+              onBlur={() => saveEdits()}
+              className="h-7 text-xs w-16 text-right"
+              disabled={disabled || !isInvestment}
+              placeholder={isInvestment ? 'Qty' : ''}
+            />
+          </TableCell>
+          <TableCell>
+            <Input
+              value={pricePerShare}
+              onChange={(e) => setPricePerShare(e.target.value)}
+              onBlur={() => saveEdits()}
+              className="h-7 text-xs w-20 text-right"
+              disabled={disabled || !isInvestment}
+              placeholder={isInvestment ? 'Price' : ''}
+            />
+          </TableCell>
+        </>
+      )}
       {/* Type */}
       <TableCell>
         <Select value={transactionType} onValueChange={(val) => { setTransactionType(val); saveEdits({ transaction_type: val }); }} disabled={disabled}>
@@ -137,37 +191,41 @@ function ReadyRow({
         </Select>
       </TableCell>
       {/* Category */}
-      <TableCell>
-        <Select value={categoryUuid} onValueChange={(val) => { handleCategoryChange(val); saveEdits({ category_uuid: val, subcategory_uuid: '' }); }} disabled={disabled}>
-          <SelectTrigger className="h-7 text-xs w-36">
-            <SelectValue placeholder="No category" />
-          </SelectTrigger>
-          <SelectContent>
-            {categories.filter((c) => !c.parent_category_uuid).map((cat) => (
-              <SelectItem key={cat.id} value={cat.id} className="text-xs">
-                {cat.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </TableCell>
-      {/* Subcategory */}
-      <TableCell>
-        <Select
-          value={subcategoryUuid}
-          onValueChange={(val) => { setSubcategoryUuid(val); saveEdits({ subcategory_uuid: val }); }}
-          disabled={disabled || subcategories.length === 0}
-        >
-          <SelectTrigger className="h-7 text-xs w-36">
-            <SelectValue placeholder="No subcategory" />
-          </SelectTrigger>
-          <SelectContent>
-            {subcategories.map((cat) => (
-              <SelectItem key={cat.id} value={cat.id} className="text-xs">{cat.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </TableCell>
+      {showRegularCols && (
+        <>
+          <TableCell>
+            <Select value={categoryUuid} onValueChange={(val) => { handleCategoryChange(val); saveEdits({ category_uuid: val, subcategory_uuid: '' }); }} disabled={disabled}>
+              <SelectTrigger className="h-7 text-xs w-36">
+                <SelectValue placeholder="No category" />
+              </SelectTrigger>
+              <SelectContent>
+                {categories.filter((c) => !c.parent_category_uuid).map((cat) => (
+                  <SelectItem key={cat.id} value={cat.id} className="text-xs">
+                    {cat.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </TableCell>
+          {/* Subcategory */}
+          <TableCell>
+            <Select
+              value={subcategoryUuid}
+              onValueChange={(val) => { setSubcategoryUuid(val); saveEdits({ subcategory_uuid: val }); }}
+              disabled={disabled || subcategories.length === 0}
+            >
+              <SelectTrigger className="h-7 text-xs w-36">
+                <SelectValue placeholder="No subcategory" />
+              </SelectTrigger>
+              <SelectContent>
+                {subcategories.map((cat) => (
+                  <SelectItem key={cat.id} value={cat.id} className="text-xs">{cat.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </TableCell>
+        </>
+      )}
       {/* Tags */}
       <TableCell>
         <TagsCell tagUuids={tagUuids} allTags={allTags} onToggle={(uuid) => {
@@ -184,7 +242,7 @@ function ReadyRow({
           onBlur={() => saveEdits()}
           className="h-7 text-xs w-32"
           disabled={disabled}
-          placeholder="Comments"
+          placeholder="Notes"
         />
       </TableCell>
       {/* Source */}
@@ -221,6 +279,9 @@ export function ReadyToImportTable({ items, onMoveToReview, onBulkMoveToReview, 
   const { data: categoriesData = [] } = useCategories();
   const categoryMap = buildCategoryMap(categoriesData);
   const { data: allTags = [] } = useTags();
+
+  const showInvestmentCols = items.some((i) => isInvestmentItem(i));
+  const showRegularCols = items.some((i) => !isInvestmentItem(i));
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
@@ -268,11 +329,23 @@ export function ReadyToImportTable({ items, onMoveToReview, onBulkMoveToReview, 
               <TableHead className="w-28">Date</TableHead>
               <TableHead>Description / Merchant</TableHead>
               <TableHead className="w-28">Amount</TableHead>
+              {showInvestmentCols && (
+                <>
+                  <TableHead className="w-20">Symbol</TableHead>
+                  <TableHead className="w-20">Security</TableHead>
+                  <TableHead className="w-16">Qty</TableHead>
+                  <TableHead className="w-20">Price</TableHead>
+                </>
+              )}
               <TableHead className="w-32">Type</TableHead>
-              <TableHead className="w-40">Category</TableHead>
-              <TableHead className="w-40">Subcategory</TableHead>
+              {showRegularCols && (
+                <>
+                  <TableHead className="w-40">Category</TableHead>
+                  <TableHead className="w-40">Subcategory</TableHead>
+                </>
+              )}
               <TableHead className="w-36">Tags</TableHead>
-              <TableHead className="w-36">Comments</TableHead>
+              <TableHead className="w-36">Notes</TableHead>
               <TableHead className="w-28">Source</TableHead>
               <TableHead className="w-28">Actions</TableHead>
             </TableRow>
@@ -291,6 +364,8 @@ export function ReadyToImportTable({ items, onMoveToReview, onBulkMoveToReview, 
                 categories={categoriesData}
                 categoryMap={categoryMap}
                 allTags={allTags}
+                showInvestmentCols={showInvestmentCols}
+                showRegularCols={showRegularCols}
               />
             ))}
           </TableBody>

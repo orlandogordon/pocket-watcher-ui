@@ -28,6 +28,7 @@ export interface InvestmentTransactionResponse {
   account_uuid: string;
   transaction_type: InvestmentTransactionType;
   symbol: string | null;
+  api_symbol: string | null;
   quantity: string | null;
   price_per_share: string | null;
   total_amount: string;

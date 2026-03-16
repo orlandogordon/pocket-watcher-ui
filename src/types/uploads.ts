@@ -19,6 +19,12 @@ export interface ParsedData {
   transaction_type: string;
   symbol?: string;
   quantity?: string;
+  // Investment-specific fields
+  total_amount?: string;
+  price_per_share?: string;
+  api_symbol?: string;
+  security_type?: string;
+  transaction_kind?: 'regular' | 'investment';
 }
 
 export interface EditedData {
@@ -31,16 +37,40 @@ export interface EditedData {
   subcategory_uuid?: string;
   tag_uuids?: string[];
   comments?: string;
+  // Investment-specific fields
+  total_amount?: string;
+  symbol?: string;
+  security_type?: string;
+  quantity?: string;
+  price_per_share?: string;
 }
 
-// Stub — expand when investments page is built
+// Stub for existing_investment_transaction on PreviewItem
 export interface InvestmentTransactionResponse {
   id: string;
   transaction_date: string;
-  amount: string;
+  total_amount: string;
   description: string;
   symbol?: string;
   quantity?: string;
+  price_per_share?: string;
+  security_type?: string;
+}
+
+export interface DuplicateInfo {
+  duplicate_type: 'database' | 'within_statement' | 'both';
+  existing_transaction?: {
+    id: string;
+    transaction_date: string;
+    transaction_type: string;
+    symbol?: string | null;
+    quantity?: string | null;
+    price_per_share?: string | null;
+    total_amount?: string;
+    amount?: string;
+    description: string;
+  };
+  existing_transaction_id?: string;
 }
 
 export interface PreviewItem {
@@ -48,10 +78,10 @@ export interface PreviewItem {
   parsed_data: ParsedData;
   edited_data: Record<string, unknown>; // cast to EditedData at render
   review_status: 'pending' | 'approved' | 'rejected';
-  source: 'unique' | 'approved_duplicate';
+  source?: 'unique' | 'approved_duplicate';
   duplicate_type?: 'database' | 'within_statement' | 'both';
-  existing_transaction?: TransactionResponse;
-  existing_investment_transaction?: InvestmentTransactionResponse;
+  duplicate_info?: DuplicateInfo;
+  transaction_kind?: 'regular' | 'investment';
 }
 
 export interface PreviewSummary {

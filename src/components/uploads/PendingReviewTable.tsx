@@ -38,6 +38,8 @@ export const TX_TYPES = [
   'CREDIT', 'INTEREST', 'DIVIDEND', 'BUY', 'SELL',
 ];
 
+export const SECURITY_TYPES = ['STOCK', 'OPTION', 'ETF', 'MUTUAL_FUND', 'CRYPTO'];
+
 export interface RowEdits {
   description: string;
   amount: string;
@@ -48,6 +50,12 @@ export interface RowEdits {
   subcategory_uuid: string;
   tag_uuids: string[];
   comments: string;
+  // Investment-specific
+  symbol: string;
+  security_type: string;
+  quantity: string;
+  price_per_share: string;
+  transaction_kind: 'regular' | 'investment';
 }
 
 interface PendingReviewTableProps {
@@ -59,11 +67,21 @@ interface PendingReviewTableProps {
   pendingTempId: string | null;
 }
 
+export function isInvestmentItem(item: PreviewItem): boolean {
+  if (item.transaction_kind === 'investment') return true;
+  const pd = item.parsed_data as Record<string, unknown>;
+  return pd.transaction_kind === 'investment' || (pd.total_amount != null && pd.amount == null);
+}
+
 export function useRowEdits(item: PreviewItem) {
   const edited = (item.edited_data ?? {}) as Record<string, unknown>;
   const pd = item.parsed_data as Record<string, string>;
+  const isInvestment = isInvestmentItem(item);
+  const txKind = isInvestment ? 'investment' as const : 'regular' as const;
   const [description, setDescription] = useState(String(edited.description ?? pd.description ?? ''));
-  const [amount, setAmount] = useState(String(edited.amount ?? pd.amount ?? ''));
+  const [amount, setAmount] = useState(
+    String(edited.amount ?? pd.amount ?? edited.total_amount ?? pd.total_amount ?? ''),
+  );
   const [transactionType, setTransactionType] = useState(String(edited.transaction_type ?? pd.transaction_type ?? ''));
   const [transactionDate, setTransactionDate] = useState(String(edited.transaction_date ?? pd.transaction_date ?? ''));
   const [merchantName, setMerchantName] = useState(String(edited.merchant_name ?? pd.merchant_name ?? ''));
@@ -73,6 +91,10 @@ export function useRowEdits(item: PreviewItem) {
     Array.isArray(edited.tag_uuids) ? (edited.tag_uuids as string[]) : [],
   );
   const [comments, setComments] = useState(String(edited.comments ?? ''));
+  const [symbol, setSymbol] = useState(String(edited.symbol ?? pd.symbol ?? ''));
+  const [securityType, setSecurityType] = useState(String(edited.security_type ?? pd.security_type ?? ''));
+  const [quantity, setQuantity] = useState(String(edited.quantity ?? pd.quantity ?? ''));
+  const [pricePerShare, setPricePerShare] = useState(String(edited.price_per_share ?? pd.price_per_share ?? ''));
 
   function toggleTag(uuid: string) {
     setTagUuids((prev) =>
@@ -86,6 +108,8 @@ export function useRowEdits(item: PreviewItem) {
       transaction_date: transactionDate, merchant_name: merchantName,
       category_uuid: categoryUuid, subcategory_uuid: subcategoryUuid,
       tag_uuids: tagUuids, comments,
+      symbol, security_type: securityType, quantity, price_per_share: pricePerShare,
+      transaction_kind: txKind,
     } as RowEdits,
     description, setDescription,
     amount, setAmount,
@@ -96,6 +120,11 @@ export function useRowEdits(item: PreviewItem) {
     subcategoryUuid, setSubcategoryUuid,
     tagUuids, toggleTag,
     comments, setComments,
+    symbol, setSymbol,
+    securityType, setSecurityType,
+    quantity, setQuantity,
+    pricePerShare, setPricePerShare,
+    isInvestment,
   };
 }
 
@@ -154,7 +183,7 @@ export function TagsCell({
 }
 
 function PendingRow({
-  item, onReview, onEditSave, isPending, pendingTempId, selected, onToggleSelect, categories, categoryMap, allTags,
+  item, onReview, onEditSave, isPending, pendingTempId, selected, onToggleSelect, categories, categoryMap, allTags, showInvestmentCols, showRegularCols,
 }: {
   item: PreviewItem;
   onReview: (tempId: string, action: DuplicateAction, edits?: RowEdits) => void;
@@ -166,6 +195,8 @@ function PendingRow({
   categories: CategoryResponse[];
   categoryMap: Map<string, CategoryResponse>;
   allTags: TagResponse[];
+  showInvestmentCols: boolean;
+  showRegularCols: boolean;
 }) {
   const {
     edits,
@@ -178,6 +209,11 @@ function PendingRow({
     subcategoryUuid, setSubcategoryUuid,
     tagUuids, toggleTag,
     comments, setComments,
+    symbol, setSymbol,
+    securityType, setSecurityType,
+    quantity, setQuantity,
+    pricePerShare, setPricePerShare,
+    isInvestment,
   } = useRowEdits(item);
 
   const isThisRowPending = pendingTempId === item.temp_id;
@@ -241,6 +277,53 @@ function PendingRow({
           disabled={disabled}
         />
       </TableCell>
+      {/* Investment columns */}
+      {showInvestmentCols && (
+        <>
+          <TableCell>
+            <Input
+              value={symbol}
+              onChange={(e) => setSymbol(e.target.value)}
+              onBlur={() => saveEdits()}
+              className="h-7 text-xs w-20"
+              disabled={disabled || !isInvestment}
+              placeholder={isInvestment ? 'Symbol' : ''}
+            />
+          </TableCell>
+          <TableCell>
+            <Select value={securityType} onValueChange={(val) => { setSecurityType(val); saveEdits({ security_type: val }); }} disabled={disabled || !isInvestment}>
+              <SelectTrigger className="h-7 text-xs w-28">
+                <SelectValue placeholder="Security" />
+              </SelectTrigger>
+              <SelectContent>
+                {SECURITY_TYPES.map((t) => (
+                  <SelectItem key={t} value={t} className="text-xs">{t}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </TableCell>
+          <TableCell>
+            <Input
+              value={quantity}
+              onChange={(e) => setQuantity(e.target.value)}
+              onBlur={() => saveEdits()}
+              className="h-7 text-xs w-16 text-right"
+              disabled={disabled || !isInvestment}
+              placeholder={isInvestment ? 'Qty' : ''}
+            />
+          </TableCell>
+          <TableCell>
+            <Input
+              value={pricePerShare}
+              onChange={(e) => setPricePerShare(e.target.value)}
+              onBlur={() => saveEdits()}
+              className="h-7 text-xs w-20 text-right"
+              disabled={disabled || !isInvestment}
+              placeholder={isInvestment ? 'Price' : ''}
+            />
+          </TableCell>
+        </>
+      )}
       {/* Type */}
       <TableCell>
         <Select value={transactionType} onValueChange={(val) => { setTransactionType(val); saveEdits({ transaction_type: val }); }} disabled={disabled}>
@@ -255,37 +338,41 @@ function PendingRow({
         </Select>
       </TableCell>
       {/* Category */}
-      <TableCell>
-        <Select value={categoryUuid} onValueChange={(val) => { handleCategoryChange(val); saveEdits({ category_uuid: val, subcategory_uuid: '' }); }} disabled={disabled}>
-          <SelectTrigger className="h-7 text-xs w-36">
-            <SelectValue placeholder="No category" />
-          </SelectTrigger>
-          <SelectContent>
-            {categories.filter((c) => !c.parent_category_uuid).map((cat) => (
-              <SelectItem key={cat.id} value={cat.id} className="text-xs">
-                {cat.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </TableCell>
-      {/* Subcategory */}
-      <TableCell>
-        <Select
-          value={subcategoryUuid}
-          onValueChange={(val) => { setSubcategoryUuid(val); saveEdits({ subcategory_uuid: val }); }}
-          disabled={disabled || subcategories.length === 0}
-        >
-          <SelectTrigger className="h-7 text-xs w-36">
-            <SelectValue placeholder="No subcategory" />
-          </SelectTrigger>
-          <SelectContent>
-            {subcategories.map((cat) => (
-              <SelectItem key={cat.id} value={cat.id} className="text-xs">{cat.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </TableCell>
+      {showRegularCols && (
+        <>
+          <TableCell>
+            <Select value={categoryUuid} onValueChange={(val) => { handleCategoryChange(val); saveEdits({ category_uuid: val, subcategory_uuid: '' }); }} disabled={disabled}>
+              <SelectTrigger className="h-7 text-xs w-36">
+                <SelectValue placeholder="No category" />
+              </SelectTrigger>
+              <SelectContent>
+                {categories.filter((c) => !c.parent_category_uuid).map((cat) => (
+                  <SelectItem key={cat.id} value={cat.id} className="text-xs">
+                    {cat.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </TableCell>
+          {/* Subcategory */}
+          <TableCell>
+            <Select
+              value={subcategoryUuid}
+              onValueChange={(val) => { setSubcategoryUuid(val); saveEdits({ subcategory_uuid: val }); }}
+              disabled={disabled || subcategories.length === 0}
+            >
+              <SelectTrigger className="h-7 text-xs w-36">
+                <SelectValue placeholder="No subcategory" />
+              </SelectTrigger>
+              <SelectContent>
+                {subcategories.map((cat) => (
+                  <SelectItem key={cat.id} value={cat.id} className="text-xs">{cat.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </TableCell>
+        </>
+      )}
       {/* Tags */}
       <TableCell>
         <TagsCell tagUuids={tagUuids} allTags={allTags} onToggle={(uuid) => {
@@ -294,7 +381,7 @@ function PendingRow({
           saveEdits({ tag_uuids: newTags });
         }} disabled={disabled} />
       </TableCell>
-      {/* Comments */}
+      {/* Notes */}
       <TableCell>
         <Input
           value={comments}
@@ -302,16 +389,17 @@ function PendingRow({
           onBlur={saveEdits}
           className="h-7 text-xs w-32"
           disabled={disabled}
-          placeholder="Comments"
+          placeholder="Notes"
         />
       </TableCell>
       {/* DB Match */}
       <TableCell>
-        {item.existing_transaction ? (
+        {item.duplicate_info?.existing_transaction ? (
           <div>
-            <div className="text-xs font-medium truncate max-w-28">{item.existing_transaction.description}</div>
+            <div className="text-xs font-medium truncate max-w-28">{item.duplicate_info.existing_transaction.description}</div>
             <div className="text-xs text-muted-foreground">
-              {formatCurrency(parseFloat(item.existing_transaction.amount))} · {item.existing_transaction.transaction_date}
+              {formatCurrency(parseFloat(item.duplicate_info.existing_transaction.total_amount ?? item.duplicate_info.existing_transaction.amount ?? '0'))}
+              {' · '}{item.duplicate_info.existing_transaction.transaction_date}
             </div>
             {item.duplicate_type && (
               <Badge variant="secondary" className="text-xs mt-0.5">
@@ -319,6 +407,10 @@ function PendingRow({
               </Badge>
             )}
           </div>
+        ) : item.duplicate_type ? (
+          <Badge variant="secondary" className="text-xs">
+            {DUPLICATE_TYPE_LABELS[item.duplicate_type] ?? item.duplicate_type}
+          </Badge>
         ) : (
           <span className="text-xs text-muted-foreground">—</span>
         )}
@@ -352,7 +444,7 @@ function PendingRow({
 }
 
 function RejectedRow({
-  item, onReview, isPending, pendingTempId, selected, onToggleSelect,
+  item, onReview, isPending, pendingTempId, selected, onToggleSelect, showInvestmentCols,
 }: {
   item: PreviewItem;
   onReview: (tempId: string, action: DuplicateAction) => void;
@@ -360,11 +452,14 @@ function RejectedRow({
   pendingTempId: string | null;
   selected: boolean;
   onToggleSelect: (tempId: string) => void;
+  showInvestmentCols: boolean;
+  showRegularCols: boolean;
 }) {
   const isThisRowPending = pendingTempId === item.temp_id;
   const disabled = isPending || isThisRowPending;
   const edited = (item.edited_data ?? {}) as Record<string, unknown>;
   const pd = item.parsed_data as Record<string, string>;
+  const displayAmount = String(edited.amount ?? pd.amount ?? edited.total_amount ?? pd.total_amount ?? '0');
 
   return (
     <TableRow className="opacity-50">
@@ -374,10 +469,19 @@ function RejectedRow({
       <TableCell className="text-xs">{String(edited.transaction_date ?? pd.transaction_date)}</TableCell>
       <TableCell className="text-xs">{String(edited.description ?? pd.description)}</TableCell>
       <TableCell className="text-xs text-right">
-        {formatCurrency(parseFloat(String(edited.amount ?? pd.amount)))}
+        {formatCurrency(parseFloat(displayAmount))}
       </TableCell>
+      {showInvestmentCols && (
+        <>
+          <TableCell className="text-xs">{String(edited.symbol ?? pd.symbol ?? '')}</TableCell>
+          <TableCell className="text-xs">{String(edited.security_type ?? pd.security_type ?? '')}</TableCell>
+          <TableCell className="text-xs text-right">{String(edited.quantity ?? pd.quantity ?? '')}</TableCell>
+          <TableCell className="text-xs text-right">{String(edited.price_per_share ?? pd.price_per_share ?? '')}</TableCell>
+        </>
+      )}
       <TableCell className="text-xs">{String(edited.transaction_type ?? pd.transaction_type)}</TableCell>
-      <TableCell /><TableCell /><TableCell /><TableCell /><TableCell />
+      {showRegularCols && <><TableCell /><TableCell /></>}
+      <TableCell /><TableCell /><TableCell />
       <TableCell>
         <Button
           size="sm"
@@ -397,6 +501,9 @@ export function PendingReviewTable({ items, onReview, onBulkReview, onEditSave, 
   const { data: categoriesData = [] } = useCategories();
   const categoryMap = buildCategoryMap(categoriesData);
   const { data: allTags = [] } = useTags();
+
+  const showInvestmentCols = items.some((i) => isInvestmentItem(i));
+  const showRegularCols = items.some((i) => !isInvestmentItem(i));
 
   const [selectedPending, setSelectedPending] = useState<Set<string>>(new Set());
   const [selectedRejected, setSelectedRejected] = useState<Set<string>>(new Set());
@@ -456,11 +563,23 @@ export function PendingReviewTable({ items, onReview, onBulkReview, onEditSave, 
       <TableHead className="w-28">Date</TableHead>
       <TableHead>Description / Merchant</TableHead>
       <TableHead className="w-28">Amount</TableHead>
+      {showInvestmentCols && (
+        <>
+          <TableHead className="w-20">Symbol</TableHead>
+          <TableHead className="w-20">Security</TableHead>
+          <TableHead className="w-16">Qty</TableHead>
+          <TableHead className="w-20">Price</TableHead>
+        </>
+      )}
       <TableHead className="w-32">Type</TableHead>
-      <TableHead className="w-40">Category</TableHead>
-      <TableHead className="w-40">Subcategory</TableHead>
+      {showRegularCols && (
+        <>
+          <TableHead className="w-40">Category</TableHead>
+          <TableHead className="w-40">Subcategory</TableHead>
+        </>
+      )}
       <TableHead className="w-36">Tags</TableHead>
-      <TableHead className="w-36">Comments</TableHead>
+      <TableHead className="w-36">Notes</TableHead>
       <TableHead className="w-36">DB Match</TableHead>
       <TableHead className="w-36">Actions</TableHead>
     </TableRow>
@@ -478,8 +597,17 @@ export function PendingReviewTable({ items, onReview, onBulkReview, onEditSave, 
       <TableHead className="w-28">Date</TableHead>
       <TableHead>Description</TableHead>
       <TableHead className="w-28">Amount</TableHead>
+      {showInvestmentCols && (
+        <>
+          <TableHead className="w-20">Symbol</TableHead>
+          <TableHead className="w-20">Security</TableHead>
+          <TableHead className="w-16">Qty</TableHead>
+          <TableHead className="w-20">Price</TableHead>
+        </>
+      )}
       <TableHead className="w-32">Type</TableHead>
-      <TableHead /><TableHead /><TableHead /><TableHead /><TableHead />
+      {showRegularCols && <><TableHead /><TableHead /></>}
+      <TableHead /><TableHead /><TableHead />
       <TableHead className="w-36">Actions</TableHead>
     </TableRow>
   );
@@ -509,6 +637,8 @@ export function PendingReviewTable({ items, onReview, onBulkReview, onEditSave, 
                     categories={categoriesData}
                     categoryMap={categoryMap}
                     allTags={allTags}
+                    showInvestmentCols={showInvestmentCols}
+                    showRegularCols={showRegularCols}
                   />
                 ))}
               </TableBody>
@@ -545,6 +675,8 @@ export function PendingReviewTable({ items, onReview, onBulkReview, onEditSave, 
                       pendingTempId={pendingTempId}
                       selected={selectedRejected.has(item.temp_id)}
                       onToggleSelect={toggleRejected}
+                      showInvestmentCols={showInvestmentCols}
+                      showRegularCols={showRegularCols}
                     />
                   ))}
                 </TableBody>
