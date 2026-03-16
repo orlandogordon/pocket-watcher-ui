@@ -24,6 +24,20 @@ interface PreviewSessionProps {
   onConfirmed: (result: ConfirmResponse) => void;
 }
 
+function buildEditedData(edits: RowEdits): Record<string, unknown> {
+  const edited_data: Record<string, unknown> = {};
+  if (edits.description) edited_data.description = edits.description;
+  if (edits.amount) edited_data.amount = edits.amount;
+  if (edits.transaction_type) edited_data.transaction_type = edits.transaction_type;
+  if (edits.transaction_date) edited_data.transaction_date = edits.transaction_date;
+  if (edits.merchant_name) edited_data.merchant_name = edits.merchant_name;
+  if (edits.category_uuid) edited_data.category_uuid = edits.category_uuid;
+  if (edits.subcategory_uuid) edited_data.subcategory_uuid = edits.subcategory_uuid;
+  if (edits.tag_uuids.length > 0) edited_data.tag_uuids = edits.tag_uuids;
+  if (edits.comments) edited_data.comments = edits.comments;
+  return edited_data;
+}
+
 export function PreviewSession({ sessionId, onCancel, onConfirmed }: PreviewSessionProps) {
   const [pendingTempId, setPendingTempId] = useState<string | null>(null);
 
@@ -40,27 +54,23 @@ export function PreviewSession({ sessionId, onCancel, onConfirmed }: PreviewSess
   async function handleReview(tempId: string, action: DuplicateAction, edits?: RowEdits) {
     setPendingTempId(tempId);
     try {
-      // Move the item first — approve moves it into ready_to_import, reject keeps it in pending_review
-      await reviewDuplicate.mutateAsync({ tempId, action });
-
-      // Persist inline edits only after approve, since edit-transaction searches in ready_to_import
-      if (action === 'approve' && edits) {
-        const edited_data: Record<string, unknown> = {};
-        if (edits.description) edited_data.description = edits.description;
-        if (edits.amount) edited_data.amount = edits.amount;
-        if (edits.transaction_type) edited_data.transaction_type = edits.transaction_type;
-        if (edits.transaction_date) edited_data.transaction_date = edits.transaction_date;
-        if (edits.merchant_name) edited_data.merchant_name = edits.merchant_name;
-        if (edits.category_uuid) edited_data.category_uuid = edits.category_uuid;
-        if (edits.subcategory_uuid) edited_data.subcategory_uuid = edits.subcategory_uuid;
-        if (edits.tag_uuids.length > 0) edited_data.tag_uuids = edits.tag_uuids;
-        if (edits.comments) edited_data.comments = edits.comments;
+      // Persist inline edits before moving — they'll carry over during approve
+      if (edits) {
+        const edited_data = buildEditedData(edits);
         if (Object.keys(edited_data).length > 0) {
           await editTransaction.mutateAsync({ temp_id: tempId, edited_data });
         }
       }
+      await reviewDuplicate.mutateAsync({ tempId, action });
     } finally {
       setPendingTempId(null);
+    }
+  }
+
+  function handleEditSave(tempId: string, edits: RowEdits) {
+    const edited_data = buildEditedData(edits);
+    if (Object.keys(edited_data).length > 0) {
+      editTransaction.mutate({ temp_id: tempId, edited_data });
     }
   }
 
@@ -211,6 +221,7 @@ export function PreviewSession({ sessionId, onCancel, onConfirmed }: PreviewSess
           items={allPending}
           onReview={handleReview}
           onBulkReview={handleBulkReview}
+          onEditSave={handleEditSave}
           isPending={reviewDuplicate.isPending || bulkReviewDuplicate.isPending || editTransaction.isPending}
           pendingTempId={pendingTempId}
         />

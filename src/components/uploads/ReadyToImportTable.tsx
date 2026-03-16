@@ -116,7 +116,7 @@ export function ReadyToImportTable({ items, onMoveToReview, onBulkMoveToReview, 
                       disabled={disabled}
                     />
                   </TableCell>
-                  <TableCell className="text-sm">{item.parsed_data.transaction_date}</TableCell>
+                  <TableCell className="text-sm">{effectiveStr(item, 'transaction_date') || item.parsed_data.transaction_date}</TableCell>
                   <TableCell className="text-sm">{desc}</TableCell>
                   <TableCell className="text-sm text-right">
                     {formatCurrency(parseFloat(amt))}

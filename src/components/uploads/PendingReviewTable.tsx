@@ -54,6 +54,7 @@ interface PendingReviewTableProps {
   items: PreviewItem[];
   onReview: (tempId: string, action: DuplicateAction, edits?: RowEdits) => void;
   onBulkReview: (items: { temp_id: string; action: DuplicateAction }[]) => void;
+  onEditSave: (tempId: string, edits: RowEdits) => void;
   isPending: boolean;
   pendingTempId: string | null;
 }
@@ -153,10 +154,11 @@ function TagsCell({
 }
 
 function PendingRow({
-  item, onReview, isPending, pendingTempId, selected, onToggleSelect, categories, categoryMap, allTags,
+  item, onReview, onEditSave, isPending, pendingTempId, selected, onToggleSelect, categories, categoryMap, allTags,
 }: {
   item: PreviewItem;
   onReview: (tempId: string, action: DuplicateAction, edits?: RowEdits) => void;
+  onEditSave: (tempId: string, edits: RowEdits) => void;
   isPending: boolean;
   pendingTempId: string | null;
   selected: boolean;
@@ -183,6 +185,10 @@ function PendingRow({
 
   const subcategories = categories.filter((c) => c.parent_category_uuid === categoryUuid);
 
+  function saveEdits(overrides?: Partial<RowEdits>) {
+    onEditSave(item.temp_id, overrides ? { ...edits, ...overrides } : edits);
+  }
+
   function handleCategoryChange(val: string) {
     setCategoryUuid(val);
     setSubcategoryUuid(''); // reset subcategory when category changes
@@ -198,6 +204,7 @@ function PendingRow({
         <Input
           value={transactionDate}
           onChange={(e) => setTransactionDate(e.target.value)}
+          onBlur={saveEdits}
           className="h-7 text-xs w-28"
           disabled={disabled}
           placeholder="YYYY-MM-DD"
@@ -209,6 +216,7 @@ function PendingRow({
           <Input
             value={description}
             onChange={(e) => setDescription(e.target.value)}
+            onBlur={saveEdits}
             className="h-7 text-xs"
             disabled={disabled}
             placeholder="Description"
@@ -216,6 +224,7 @@ function PendingRow({
           <Input
             value={merchantName}
             onChange={(e) => setMerchantName(e.target.value)}
+            onBlur={saveEdits}
             className="h-6 text-xs text-muted-foreground"
             disabled={disabled}
             placeholder="Merchant (optional)"
@@ -227,13 +236,14 @@ function PendingRow({
         <Input
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
+          onBlur={saveEdits}
           className="h-7 text-xs w-24 text-right"
           disabled={disabled}
         />
       </TableCell>
       {/* Type */}
       <TableCell>
-        <Select value={transactionType} onValueChange={setTransactionType} disabled={disabled}>
+        <Select value={transactionType} onValueChange={(val) => { setTransactionType(val); saveEdits({ transaction_type: val }); }} disabled={disabled}>
           <SelectTrigger className="h-7 text-xs w-28">
             <SelectValue />
           </SelectTrigger>
@@ -246,7 +256,7 @@ function PendingRow({
       </TableCell>
       {/* Category */}
       <TableCell>
-        <Select value={categoryUuid} onValueChange={handleCategoryChange} disabled={disabled}>
+        <Select value={categoryUuid} onValueChange={(val) => { handleCategoryChange(val); saveEdits({ category_uuid: val, subcategory_uuid: '' }); }} disabled={disabled}>
           <SelectTrigger className="h-7 text-xs w-36">
             <SelectValue placeholder="No category" />
           </SelectTrigger>
@@ -263,7 +273,7 @@ function PendingRow({
       <TableCell>
         <Select
           value={subcategoryUuid}
-          onValueChange={setSubcategoryUuid}
+          onValueChange={(val) => { setSubcategoryUuid(val); saveEdits({ subcategory_uuid: val }); }}
           disabled={disabled || subcategories.length === 0}
         >
           <SelectTrigger className="h-7 text-xs w-36">
@@ -278,13 +288,18 @@ function PendingRow({
       </TableCell>
       {/* Tags */}
       <TableCell>
-        <TagsCell tagUuids={tagUuids} allTags={allTags} onToggle={toggleTag} disabled={disabled} />
+        <TagsCell tagUuids={tagUuids} allTags={allTags} onToggle={(uuid) => {
+          const newTags = tagUuids.includes(uuid) ? tagUuids.filter((t) => t !== uuid) : [...tagUuids, uuid];
+          toggleTag(uuid);
+          saveEdits({ tag_uuids: newTags });
+        }} disabled={disabled} />
       </TableCell>
       {/* Comments */}
       <TableCell>
         <Input
           value={comments}
           onChange={(e) => setComments(e.target.value)}
+          onBlur={saveEdits}
           className="h-7 text-xs w-32"
           disabled={disabled}
           placeholder="Comments"
@@ -378,7 +393,7 @@ function RejectedRow({
   );
 }
 
-export function PendingReviewTable({ items, onReview, onBulkReview, isPending, pendingTempId }: PendingReviewTableProps) {
+export function PendingReviewTable({ items, onReview, onBulkReview, onEditSave, isPending, pendingTempId }: PendingReviewTableProps) {
   const { data: categoriesData = [] } = useCategories();
   const categoryMap = buildCategoryMap(categoriesData);
   const { data: allTags = [] } = useTags();
@@ -486,6 +501,7 @@ export function PendingReviewTable({ items, onReview, onBulkReview, isPending, p
                     key={item.temp_id}
                     item={item}
                     onReview={onReview}
+                    onEditSave={onEditSave}
                     isPending={isPending}
                     pendingTempId={pendingTempId}
                     selected={selectedPending.has(item.temp_id)}
