@@ -2,6 +2,14 @@ import { useState, useCallback } from 'react';
 import { Undo2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   Table,
   TableBody,
@@ -11,33 +19,208 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { formatCurrency } from '@/lib/format';
-import { useCategories, buildCategoryMap, getCategoryLabel } from '@/hooks/useCategories';
+import { useCategories, buildCategoryMap } from '@/hooks/useCategories';
 import { useTags } from '@/hooks/useTags';
-import type { PreviewItem, EditedData } from '@/types/uploads';
-
-function effective(item: PreviewItem, field: keyof EditedData): unknown {
-  const edited = (item.edited_data ?? {}) as EditedData;
-  return edited[field] ?? (item.parsed_data as Record<string, unknown>)[field];
-}
-
-function effectiveStr(item: PreviewItem, field: keyof EditedData): string {
-  return (effective(item, field) as string) ?? '';
-}
+import type { CategoryResponse } from '@/types/categories';
+import type { TagResponse } from '@/types/transactions';
+import type { PreviewItem } from '@/types/uploads';
+import { useRowEdits, TagsCell, TX_TYPES, type RowEdits } from './PendingReviewTable';
 
 interface ReadyToImportTableProps {
   items: PreviewItem[];
   onMoveToReview: (tempId: string) => void;
   onBulkMoveToReview: (tempIds: string[]) => void;
+  onEditSave: (tempId: string, edits: RowEdits) => void;
   isPending: boolean;
   pendingTempId: string | null;
 }
 
-export function ReadyToImportTable({ items, onMoveToReview, onBulkMoveToReview, isPending, pendingTempId }: ReadyToImportTableProps) {
+function ReadyRow({
+  item, onMoveToReview, onEditSave, isPending, pendingTempId, selected, onToggleSelect, categories, categoryMap, allTags,
+}: {
+  item: PreviewItem;
+  onMoveToReview: (tempId: string) => void;
+  onEditSave: (tempId: string, edits: RowEdits) => void;
+  isPending: boolean;
+  pendingTempId: string | null;
+  selected: boolean;
+  onToggleSelect: (tempId: string) => void;
+  categories: CategoryResponse[];
+  categoryMap: Map<string, CategoryResponse>;
+  allTags: TagResponse[];
+}) {
+  const {
+    edits,
+    description, setDescription,
+    amount, setAmount,
+    transactionType, setTransactionType,
+    transactionDate, setTransactionDate,
+    merchantName, setMerchantName,
+    categoryUuid, setCategoryUuid,
+    subcategoryUuid, setSubcategoryUuid,
+    tagUuids, toggleTag,
+    comments, setComments,
+  } = useRowEdits(item);
+
+  const isThisRowPending = pendingTempId === item.temp_id;
+  const disabled = isPending || isThisRowPending;
+
+  const subcategories = categories.filter((c) => c.parent_category_uuid === categoryUuid);
+
+  function saveEdits(overrides?: Partial<RowEdits>) {
+    onEditSave(item.temp_id, overrides ? { ...edits, ...overrides } : edits);
+  }
+
+  function handleCategoryChange(val: string) {
+    setCategoryUuid(val);
+    setSubcategoryUuid('');
+  }
+
+  return (
+    <TableRow>
+      <TableCell>
+        <Checkbox checked={selected} onCheckedChange={() => onToggleSelect(item.temp_id)} disabled={disabled} />
+      </TableCell>
+      {/* Date */}
+      <TableCell>
+        <Input
+          value={transactionDate}
+          onChange={(e) => setTransactionDate(e.target.value)}
+          onBlur={() => saveEdits()}
+          className="h-7 text-xs w-28"
+          disabled={disabled}
+          placeholder="YYYY-MM-DD"
+        />
+      </TableCell>
+      {/* Description + Merchant */}
+      <TableCell>
+        <div className="flex flex-col gap-1">
+          <Input
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            onBlur={() => saveEdits()}
+            className="h-7 text-xs"
+            disabled={disabled}
+            placeholder="Description"
+          />
+          <Input
+            value={merchantName}
+            onChange={(e) => setMerchantName(e.target.value)}
+            onBlur={() => saveEdits()}
+            className="h-6 text-xs text-muted-foreground"
+            disabled={disabled}
+            placeholder="Merchant (optional)"
+          />
+        </div>
+      </TableCell>
+      {/* Amount */}
+      <TableCell>
+        <Input
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+          onBlur={() => saveEdits()}
+          className="h-7 text-xs w-24 text-right"
+          disabled={disabled}
+        />
+      </TableCell>
+      {/* Type */}
+      <TableCell>
+        <Select value={transactionType} onValueChange={(val) => { setTransactionType(val); saveEdits({ transaction_type: val }); }} disabled={disabled}>
+          <SelectTrigger className="h-7 text-xs w-28">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {TX_TYPES.map((t) => (
+              <SelectItem key={t} value={t} className="text-xs">{t}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </TableCell>
+      {/* Category */}
+      <TableCell>
+        <Select value={categoryUuid} onValueChange={(val) => { handleCategoryChange(val); saveEdits({ category_uuid: val, subcategory_uuid: '' }); }} disabled={disabled}>
+          <SelectTrigger className="h-7 text-xs w-36">
+            <SelectValue placeholder="No category" />
+          </SelectTrigger>
+          <SelectContent>
+            {categories.filter((c) => !c.parent_category_uuid).map((cat) => (
+              <SelectItem key={cat.id} value={cat.id} className="text-xs">
+                {cat.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </TableCell>
+      {/* Subcategory */}
+      <TableCell>
+        <Select
+          value={subcategoryUuid}
+          onValueChange={(val) => { setSubcategoryUuid(val); saveEdits({ subcategory_uuid: val }); }}
+          disabled={disabled || subcategories.length === 0}
+        >
+          <SelectTrigger className="h-7 text-xs w-36">
+            <SelectValue placeholder="No subcategory" />
+          </SelectTrigger>
+          <SelectContent>
+            {subcategories.map((cat) => (
+              <SelectItem key={cat.id} value={cat.id} className="text-xs">{cat.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </TableCell>
+      {/* Tags */}
+      <TableCell>
+        <TagsCell tagUuids={tagUuids} allTags={allTags} onToggle={(uuid) => {
+          const newTags = tagUuids.includes(uuid) ? tagUuids.filter((t) => t !== uuid) : [...tagUuids, uuid];
+          toggleTag(uuid);
+          saveEdits({ tag_uuids: newTags });
+        }} disabled={disabled} />
+      </TableCell>
+      {/* Comments */}
+      <TableCell>
+        <Input
+          value={comments}
+          onChange={(e) => setComments(e.target.value)}
+          onBlur={() => saveEdits()}
+          className="h-7 text-xs w-32"
+          disabled={disabled}
+          placeholder="Comments"
+        />
+      </TableCell>
+      {/* Source */}
+      <TableCell>
+        {item.source === 'approved_duplicate' ? (
+          <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700 border-blue-200">
+            Approved
+          </Badge>
+        ) : (
+          <Badge variant="outline" className="text-xs text-muted-foreground">
+            New
+          </Badge>
+        )}
+      </TableCell>
+      {/* Actions */}
+      <TableCell>
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-7 text-xs"
+          disabled={disabled}
+          onClick={() => onMoveToReview(item.temp_id)}
+          title="Move back to Needs Review"
+        >
+          <Undo2 className="h-3 w-3 mr-1" />
+          Review
+        </Button>
+      </TableCell>
+    </TableRow>
+  );
+}
+
+export function ReadyToImportTable({ items, onMoveToReview, onBulkMoveToReview, onEditSave, isPending, pendingTempId }: ReadyToImportTableProps) {
   const { data: categoriesData = [] } = useCategories();
   const categoryMap = buildCategoryMap(categoriesData);
   const { data: allTags = [] } = useTags();
-  const tagMap = new Map(allTags.map((t) => [t.id, t]));
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
@@ -71,7 +254,7 @@ export function ReadyToImportTable({ items, onMoveToReview, onBulkMoveToReview, 
 
   return (
     <div className="rounded-md border">
-      <div className="max-h-[420px] overflow-x-auto overflow-y-auto">
+      <div className="max-h-[calc(100vh-300px)] overflow-x-auto overflow-y-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -83,8 +266,8 @@ export function ReadyToImportTable({ items, onMoveToReview, onBulkMoveToReview, 
                 />
               </TableHead>
               <TableHead className="w-28">Date</TableHead>
-              <TableHead>Description</TableHead>
-              <TableHead className="w-28 text-right">Amount</TableHead>
+              <TableHead>Description / Merchant</TableHead>
+              <TableHead className="w-28">Amount</TableHead>
               <TableHead className="w-32">Type</TableHead>
               <TableHead className="w-40">Category</TableHead>
               <TableHead className="w-40">Subcategory</TableHead>
@@ -95,94 +278,21 @@ export function ReadyToImportTable({ items, onMoveToReview, onBulkMoveToReview, 
             </TableRow>
           </TableHeader>
           <TableBody>
-            {items.map((item) => {
-              const edited = (item.edited_data ?? {}) as EditedData;
-              const desc = effectiveStr(item, 'description');
-              const amt = effectiveStr(item, 'amount');
-              const type = effectiveStr(item, 'transaction_type');
-              const categoryUuid = edited.category_uuid ?? '';
-              const subcategoryUuid = edited.subcategory_uuid ?? '';
-              const tagUuids = Array.isArray(edited.tag_uuids) ? edited.tag_uuids : [];
-              const comments = edited.comments ?? '';
-              const isThisRowPending = pendingTempId === item.temp_id;
-              const disabled = isPending || isThisRowPending;
-
-              return (
-                <TableRow key={item.temp_id}>
-                  <TableCell>
-                    <Checkbox
-                      checked={selected.has(item.temp_id)}
-                      onCheckedChange={() => toggle(item.temp_id)}
-                      disabled={disabled}
-                    />
-                  </TableCell>
-                  <TableCell className="text-sm">{effectiveStr(item, 'transaction_date') || item.parsed_data.transaction_date}</TableCell>
-                  <TableCell className="text-sm">{desc}</TableCell>
-                  <TableCell className="text-sm text-right">
-                    {formatCurrency(parseFloat(amt))}
-                  </TableCell>
-                  <TableCell className="text-xs">{type}</TableCell>
-                  <TableCell className="text-xs text-muted-foreground">
-                    {categoryUuid ? (
-                      <span className="text-foreground">{getCategoryLabel(categoryUuid, categoryMap)}</span>
-                    ) : '—'}
-                  </TableCell>
-                  <TableCell className="text-xs text-muted-foreground">
-                    {subcategoryUuid ? (
-                      <span className="text-foreground">{getCategoryLabel(subcategoryUuid, categoryMap)}</span>
-                    ) : '—'}
-                  </TableCell>
-                  <TableCell>
-                    {tagUuids.length > 0 ? (
-                      <div className="flex flex-wrap gap-1">
-                        {tagUuids.map((uuid) => {
-                          const tag = tagMap.get(uuid);
-                          if (!tag) return null;
-                          return (
-                            <span
-                              key={uuid}
-                              className="inline-flex items-center rounded-full px-1.5 py-0.5 text-xs font-medium text-white"
-                              style={{ backgroundColor: tag.color }}
-                            >
-                              {tag.tag_name}
-                            </span>
-                          );
-                        })}
-                      </div>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">—</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-xs text-muted-foreground">
-                    {comments || '—'}
-                  </TableCell>
-                  <TableCell>
-                    {item.source === 'approved_duplicate' ? (
-                      <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700 border-blue-200">
-                        Approved
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline" className="text-xs text-muted-foreground">
-                        New
-                      </Badge>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-7 text-xs"
-                      disabled={disabled}
-                      onClick={() => onMoveToReview(item.temp_id)}
-                      title="Move back to Needs Review"
-                    >
-                      <Undo2 className="h-3 w-3 mr-1" />
-                      Review
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
+            {items.map((item) => (
+              <ReadyRow
+                key={item.temp_id}
+                item={item}
+                onMoveToReview={onMoveToReview}
+                onEditSave={onEditSave}
+                isPending={isPending}
+                pendingTempId={pendingTempId}
+                selected={selected.has(item.temp_id)}
+                onToggleSelect={toggle}
+                categories={categoriesData}
+                categoryMap={categoryMap}
+                allTags={allTags}
+              />
+            ))}
           </TableBody>
         </Table>
       </div>

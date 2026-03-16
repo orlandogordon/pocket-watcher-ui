@@ -33,7 +33,7 @@ const DUPLICATE_TYPE_LABELS: Record<string, string> = {
   both: 'DB + Statement',
 };
 
-const TX_TYPES = [
+export const TX_TYPES = [
   'PURCHASE', 'DEPOSIT', 'WITHDRAWAL', 'TRANSFER', 'FEE',
   'CREDIT', 'INTEREST', 'DIVIDEND', 'BUY', 'SELL',
 ];
@@ -59,7 +59,7 @@ interface PendingReviewTableProps {
   pendingTempId: string | null;
 }
 
-function useRowEdits(item: PreviewItem) {
+export function useRowEdits(item: PreviewItem) {
   const edited = (item.edited_data ?? {}) as Record<string, unknown>;
   const pd = item.parsed_data as Record<string, string>;
   const [description, setDescription] = useState(String(edited.description ?? pd.description ?? ''));
@@ -99,7 +99,7 @@ function useRowEdits(item: PreviewItem) {
   };
 }
 
-function TagsCell({
+export function TagsCell({
   tagUuids, allTags, onToggle, disabled,
 }: {
   tagUuids: string[];
@@ -492,7 +492,7 @@ export function PendingReviewTable({ items, onReview, onBulkReview, onEditSave, 
     <div className="space-y-4">
       {pendingItems.length > 0 && (
         <div className="rounded-md border">
-          <div className="max-h-[420px] overflow-x-auto overflow-y-auto">
+          <div className="max-h-[calc(100vh-300px)] overflow-x-auto overflow-y-auto">
             <Table>
               <TableHeader>{pendingHeader}</TableHeader>
               <TableBody>

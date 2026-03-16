@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { CheckCircle2, History, Upload } from 'lucide-react';
+import { CheckCircle2, History, Upload, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { UploadForm } from '@/components/uploads/UploadForm';
 import { PreviewSession } from '@/components/uploads/PreviewSession';
-import { usePreviewSessions } from '@/hooks/useStatementUpload';
+import { usePreviewSessions, useCancelSession } from '@/hooks/useStatementUpload';
 import { INSTITUTION_LABELS } from '@/types/uploads';
 import type { ConfirmResponse, PreviewResponse, Institution, PreviewSessionInfo } from '@/types/uploads';
 
@@ -72,6 +72,7 @@ function TimeRemaining({ expiresAt }: { expiresAt: string }) {
 
 function ActiveSessions({ onResume }: { onResume: (sessionId: string) => void }) {
   const { data: sessions, isLoading } = usePreviewSessions();
+  const cancelSession = useCancelSession();
 
   if (isLoading || !sessions?.length) return null;
 
@@ -103,6 +104,15 @@ function ActiveSessions({ onResume }: { onResume: (sessionId: string) => void })
                 <TimeRemaining expiresAt={s.expires_at} />
                 <Button size="sm" onClick={() => onResume(s.preview_session_id)}>
                   Resume
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-destructive hover:text-destructive hover:border-destructive"
+                  onClick={() => cancelSession.mutate(s.preview_session_id)}
+                  disabled={cancelSession.isPending}
+                >
+                  <X className="h-3 w-3" />
                 </Button>
               </div>
             </div>

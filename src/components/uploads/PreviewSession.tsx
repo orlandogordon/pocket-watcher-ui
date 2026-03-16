@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { AlertTriangle, CheckCircle2, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -10,7 +10,6 @@ import {
   useBulkRejectItem,
   useEditPreviewTransaction,
   useConfirmUpload,
-  useCancelSession,
   useExtendSession,
 } from '@/hooks/useStatementUpload';
 import { PendingReviewTable } from './PendingReviewTable';
@@ -48,13 +47,49 @@ export function PreviewSession({ sessionId, onCancel, onConfirmed }: PreviewSess
   const bulkRejectItem = useBulkRejectItem(sessionId);
   const editTransaction = useEditPreviewTransaction(sessionId);
   const confirmUpload = useConfirmUpload();
-  const cancelSession = useCancelSession();
   const extendSession = useExtendSession();
 
+  // Debounced edit saves — coalesce rapid field changes per row into one API call
+  const pendingEdits = useRef<Map<string, { edits: RowEdits; timer: ReturnType<typeof setTimeout> }>>(new Map());
+
+  const flushEdit = useCallback((tempId: string): Promise<unknown> | undefined => {
+    const entry = pendingEdits.current.get(tempId);
+    if (!entry) return;
+    clearTimeout(entry.timer);
+    pendingEdits.current.delete(tempId);
+    const edited_data = buildEditedData(entry.edits);
+    if (Object.keys(edited_data).length > 0) {
+      return editTransaction.mutateAsync({ temp_id: tempId, edited_data });
+    }
+  }, [editTransaction]);
+
+  const flushAllEdits = useCallback(() => {
+    const promises: Promise<unknown>[] = [];
+    for (const tempId of [...pendingEdits.current.keys()]) {
+      const p = flushEdit(tempId);
+      if (p) promises.push(p);
+    }
+    return Promise.all(promises);
+  }, [flushEdit]);
+
+  const handleEditSave = useCallback((tempId: string, edits: RowEdits) => {
+    const existing = pendingEdits.current.get(tempId);
+    if (existing) clearTimeout(existing.timer);
+    const timer = setTimeout(() => flushEdit(tempId), 2000);
+    pendingEdits.current.set(tempId, { edits, timer });
+  }, [flushEdit]);
+
   async function handleReview(tempId: string, action: DuplicateAction, edits?: RowEdits) {
+    // Flush any debounced edit for this row immediately
+    const pending = pendingEdits.current.get(tempId);
+    if (pending) {
+      clearTimeout(pending.timer);
+      pendingEdits.current.delete(tempId);
+      // Use the latest edits from the action call (they include the most recent state)
+    }
+
     setPendingTempId(tempId);
     try {
-      // Persist inline edits before moving — they'll carry over during approve
       if (edits) {
         const edited_data = buildEditedData(edits);
         if (Object.keys(edited_data).length > 0) {
@@ -64,13 +99,6 @@ export function PreviewSession({ sessionId, onCancel, onConfirmed }: PreviewSess
       await reviewDuplicate.mutateAsync({ tempId, action });
     } finally {
       setPendingTempId(null);
-    }
-  }
-
-  function handleEditSave(tempId: string, edits: RowEdits) {
-    const edited_data = buildEditedData(edits);
-    if (Object.keys(edited_data).length > 0) {
-      editTransaction.mutate({ temp_id: tempId, edited_data });
     }
   }
 
@@ -89,14 +117,12 @@ export function PreviewSession({ sessionId, onCancel, onConfirmed }: PreviewSess
     rejectUniqueItem.mutate(tempId, { onSettled: () => setPendingTempId(null) });
   }
 
-  function handleCancel() {
-    cancelSession.mutate(sessionId, {
-      onSuccess: onCancel,
-      onError: onCancel,
-    });
+  function handleBack() {
+    onCancel();
   }
 
-  function handleConfirm() {
+  async function handleConfirm() {
+    await flushAllEdits();
     confirmUpload.mutate(sessionId, {
       onSuccess: (result) => onConfirmed(result),
     });
@@ -138,8 +164,8 @@ export function PreviewSession({ sessionId, onCancel, onConfirmed }: PreviewSess
     <div className="space-y-6">
       {/* Header row */}
       <div className="flex items-center justify-between">
-        <Button variant="outline" size="sm" onClick={handleCancel} disabled={cancelSession.isPending}>
-          {cancelSession.isPending ? 'Cancelling...' : '← Cancel'}
+        <Button variant="outline" size="sm" onClick={handleBack}>
+          ← Back
         </Button>
         <Button
           onClick={handleConfirm}
@@ -222,7 +248,7 @@ export function PreviewSession({ sessionId, onCancel, onConfirmed }: PreviewSess
           onReview={handleReview}
           onBulkReview={handleBulkReview}
           onEditSave={handleEditSave}
-          isPending={reviewDuplicate.isPending || bulkReviewDuplicate.isPending || editTransaction.isPending}
+          isPending={reviewDuplicate.isPending || bulkReviewDuplicate.isPending}
           pendingTempId={pendingTempId}
         />
       </div>
@@ -236,6 +262,7 @@ export function PreviewSession({ sessionId, onCancel, onConfirmed }: PreviewSess
           items={allReady}
           onMoveToReview={handleMoveToReview}
           onBulkMoveToReview={handleBulkMoveToReview}
+          onEditSave={handleEditSave}
           isPending={reviewDuplicate.isPending || rejectUniqueItem.isPending || bulkRejectItem.isPending}
           pendingTempId={pendingTempId}
         />

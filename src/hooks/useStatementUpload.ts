@@ -80,16 +80,12 @@ export function useReviewDuplicate(sessionId: string) {
 }
 
 export function useEditPreviewTransaction(sessionId: string) {
-  const qc = useQueryClient();
   return useMutation({
     mutationFn: (payload: { temp_id: string; edited_data: Record<string, unknown> }) =>
       apiFetch<PreviewResponse>(`/uploads/preview/${sessionId}/edit-transaction`, {
         method: 'POST',
         body: JSON.stringify(payload),
       }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: uploadKeys.preview(sessionId) });
-    },
   });
 }
 
