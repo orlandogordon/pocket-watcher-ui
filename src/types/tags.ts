@@ -8,9 +8,11 @@ export interface TagCreate {
 }
 
 export interface TagStats {
-  tag_uuid: string;
+  id: string;
   tag_name: string;
   color: string;
   transaction_count: number;
-  total_amount: string;
+  total_amount: number;
+  average_amount: number;
+  most_recent_use: string | null;
 }

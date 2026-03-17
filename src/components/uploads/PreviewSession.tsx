@@ -2,19 +2,20 @@ import { useState, useRef, useCallback } from 'react';
 import { AlertTriangle, CheckCircle2, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   usePreviewSession,
-  useReviewDuplicate,
-  useRejectUniqueItem,
-  useBulkReviewDuplicate,
+  useRejectItem,
   useBulkRejectItem,
+  useRestoreItem,
+  useBulkRestoreItem,
   useEditPreviewTransaction,
   useConfirmUpload,
   useExtendSession,
 } from '@/hooks/useStatementUpload';
-import { PendingReviewTable } from './PendingReviewTable';
 import { ReadyToImportTable } from './ReadyToImportTable';
-import type { ConfirmResponse, DuplicateAction, BulkDuplicateReviewItem } from '@/types/uploads';
+import { RejectedTable } from './RejectedTable';
+import type { ConfirmResponse } from '@/types/uploads';
 import type { RowEdits } from './PendingReviewTable';
 
 interface PreviewSessionProps {
@@ -51,10 +52,10 @@ export function PreviewSession({ sessionId, onCancel, onConfirmed }: PreviewSess
   const [pendingTempId, setPendingTempId] = useState<string | null>(null);
 
   const { data: preview, isLoading, error } = usePreviewSession(sessionId);
-  const reviewDuplicate = useReviewDuplicate(sessionId);
-  const rejectUniqueItem = useRejectUniqueItem(sessionId);
-  const bulkReviewDuplicate = useBulkReviewDuplicate(sessionId);
+  const rejectItem = useRejectItem(sessionId);
   const bulkRejectItem = useBulkRejectItem(sessionId);
+  const restoreItem = useRestoreItem(sessionId);
+  const bulkRestoreItem = useBulkRestoreItem(sessionId);
   const editTransaction = useEditPreviewTransaction(sessionId);
   const confirmUpload = useConfirmUpload();
   const extendSession = useExtendSession();
@@ -89,42 +90,22 @@ export function PreviewSession({ sessionId, onCancel, onConfirmed }: PreviewSess
     pendingEdits.current.set(tempId, { edits, timer });
   }, [flushEdit]);
 
-  async function handleReview(tempId: string, action: DuplicateAction, edits?: RowEdits) {
-    // Flush any debounced edit for this row immediately
-    const pending = pendingEdits.current.get(tempId);
-    if (pending) {
-      clearTimeout(pending.timer);
-      pendingEdits.current.delete(tempId);
-      // Use the latest edits from the action call (they include the most recent state)
-    }
-
+  function handleReject(tempId: string) {
     setPendingTempId(tempId);
-    try {
-      if (edits) {
-        const edited_data = buildEditedData(edits);
-        if (Object.keys(edited_data).length > 0) {
-          await editTransaction.mutateAsync({ temp_id: tempId, edited_data });
-        }
-      }
-      await reviewDuplicate.mutateAsync({ tempId, action });
-    } finally {
-      setPendingTempId(null);
-    }
+    rejectItem.mutate(tempId, { onSettled: () => setPendingTempId(null) });
   }
 
-  function handleBulkReview(items: BulkDuplicateReviewItem[]) {
-    bulkReviewDuplicate.mutate(items);
-  }
-
-  function handleBulkMoveToReview(tempIds: string[]) {
+  function handleBulkReject(tempIds: string[]) {
     bulkRejectItem.mutate(tempIds);
   }
 
-  function handleMoveToReview(tempId: string) {
-    // /reject-item works for any ready_to_import item (unique or approved_duplicate)
-    // — it moves the item to the rejected bucket in pending_review
+  function handleRestore(tempId: string) {
     setPendingTempId(tempId);
-    rejectUniqueItem.mutate(tempId, { onSettled: () => setPendingTempId(null) });
+    restoreItem.mutate(tempId, { onSettled: () => setPendingTempId(null) });
+  }
+
+  function handleBulkRestore(tempIds: string[]) {
+    bulkRestoreItem.mutate(tempIds);
   }
 
   function handleBack() {
@@ -157,17 +138,17 @@ export function PreviewSession({ sessionId, onCancel, onConfirmed }: PreviewSess
     );
   }
 
-  const summary = preview.summary ?? { total_parsed: 0, pending_review: 0, rejected: 0, ready_to_import: 0, can_confirm: false };
+  const summary = preview.summary ?? { total_parsed: 0, rejected: 0, ready_to_import: 0 };
   const hoursLeft = (new Date(preview.expires_at).getTime() - Date.now()) / 3_600_000;
   const showTtlWarning = hoursLeft < 1;
 
-  const allPending = [
-    ...(preview.pending_review?.transactions ?? []),
-    ...(preview.pending_review?.investment_transactions ?? []),
-  ];
   const allReady = [
     ...(preview.ready_to_import?.transactions ?? []),
     ...(preview.ready_to_import?.investment_transactions ?? []),
+  ];
+  const allRejected = [
+    ...(preview.rejected?.transactions ?? []),
+    ...(preview.rejected?.investment_transactions ?? []),
   ];
 
   return (
@@ -179,7 +160,7 @@ export function PreviewSession({ sessionId, onCancel, onConfirmed }: PreviewSess
         </Button>
         <Button
           onClick={handleConfirm}
-          disabled={!summary.can_confirm || confirmUpload.isPending}
+          disabled={confirmUpload.isPending || allReady.length === 0}
         >
           <CheckCircle2 className="h-4 w-4 mr-2" />
           {confirmUpload.isPending ? 'Importing...' : 'Confirm Import'}
@@ -221,17 +202,11 @@ export function PreviewSession({ sessionId, onCancel, onConfirmed }: PreviewSess
       )}
 
       {/* Summary stat cards */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="grid grid-cols-3 gap-3">
         <Card>
           <CardContent className="pt-4 pb-4">
             <p className="text-xs text-muted-foreground">Total Parsed</p>
             <p className="text-2xl font-semibold">{summary.total_parsed}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4 pb-4">
-            <p className="text-xs text-muted-foreground">Need Review</p>
-            <p className="text-2xl font-semibold text-amber-600">{summary.pending_review}</p>
           </CardContent>
         </Card>
         <Card>
@@ -248,35 +223,36 @@ export function PreviewSession({ sessionId, onCancel, onConfirmed }: PreviewSess
         </Card>
       </div>
 
-      {/* Pending Review section — always shown so rejected items remain visible */}
-      <div className="space-y-3">
-        <h2 className="text-base font-semibold">
-          Needs Review ({allPending.length})
-        </h2>
-        <PendingReviewTable
-          items={allPending}
-          onReview={handleReview}
-          onBulkReview={handleBulkReview}
-          onEditSave={handleEditSave}
-          isPending={reviewDuplicate.isPending || bulkReviewDuplicate.isPending}
-          pendingTempId={pendingTempId}
-        />
-      </div>
-
-      {/* Ready to Import section */}
-      <div className="space-y-3">
-        <h2 className="text-base font-semibold">
-          Ready to Import ({allReady.length})
-        </h2>
-        <ReadyToImportTable
-          items={allReady}
-          onMoveToReview={handleMoveToReview}
-          onBulkMoveToReview={handleBulkMoveToReview}
-          onEditSave={handleEditSave}
-          isPending={reviewDuplicate.isPending || rejectUniqueItem.isPending || bulkRejectItem.isPending}
-          pendingTempId={pendingTempId}
-        />
-      </div>
+      {/* Tabbed sections */}
+      <Tabs defaultValue="ready">
+        <TabsList>
+          <TabsTrigger value="ready">
+            Ready to Import ({allReady.length})
+          </TabsTrigger>
+          <TabsTrigger value="rejected">
+            Rejected ({allRejected.length})
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent value="ready" className="mt-4">
+          <ReadyToImportTable
+            items={allReady}
+            onReject={handleReject}
+            onBulkReject={handleBulkReject}
+            onEditSave={handleEditSave}
+            isPending={rejectItem.isPending || bulkRejectItem.isPending}
+            pendingTempId={pendingTempId}
+          />
+        </TabsContent>
+        <TabsContent value="rejected" className="mt-4">
+          <RejectedTable
+            items={allRejected}
+            onRestore={handleRestore}
+            onBulkRestore={handleBulkRestore}
+            isPending={restoreItem.isPending || bulkRestoreItem.isPending}
+            pendingTempId={pendingTempId}
+          />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

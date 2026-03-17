@@ -96,7 +96,7 @@ function ActiveSessions({ onResume }: { onResume: (sessionId: string) => void })
                 </p>
                 {s.summary && (
                   <p className="text-xs text-muted-foreground">
-                    {s.summary.ready_to_import} ready · {s.summary.pending_review} pending
+                    {s.summary.ready_to_import} ready · {s.summary.rejected} rejected
                   </p>
                 )}
               </div>

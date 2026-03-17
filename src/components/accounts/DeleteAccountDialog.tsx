@@ -9,6 +9,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { Button } from '@/components/ui/button';
 import { useDeleteAccount } from '@/hooks/useAccounts';
 import type { AccountResponse } from '@/types/accounts';
 
@@ -62,13 +63,13 @@ export function DeleteAccountDialog({ open, onOpenChange, account }: DeleteAccou
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
           {!conflictError && (
-            <AlertDialogAction
-              onClick={handleDelete}
+            <Button
+              variant="destructive"
               disabled={deleteAccount.isPending}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={handleDelete}
             >
               {deleteAccount.isPending ? 'Deleting...' : 'Delete'}
-            </AlertDialogAction>
+            </Button>
           )}
         </AlertDialogFooter>
       </AlertDialogContent>

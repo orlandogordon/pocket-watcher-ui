@@ -77,19 +77,18 @@ export interface PreviewItem {
   temp_id: string;
   parsed_data: ParsedData;
   edited_data: Record<string, unknown>; // cast to EditedData at render
-  review_status: 'pending' | 'approved' | 'rejected';
-  source?: 'unique' | 'approved_duplicate';
+  review_status: 'ready' | 'rejected';
+  rejection_reason?: 'duplicate' | 'unmapped_type';
   duplicate_type?: 'database' | 'within_statement' | 'both';
   duplicate_info?: DuplicateInfo;
   transaction_kind?: 'regular' | 'investment';
+  unmapped_type_value?: string;
 }
 
 export interface PreviewSummary {
   total_parsed: number;
-  pending_review: number;
   rejected: number;
   ready_to_import: number;
-  can_confirm: boolean;
 }
 
 export interface PreviewResponse {
@@ -101,21 +100,14 @@ export interface PreviewResponse {
     suggested_account_name?: string;
   };
   summary: PreviewSummary | null;
-  pending_review: {
-    transactions: PreviewItem[];
-    investment_transactions: PreviewItem[];
-  } | null;
   ready_to_import: {
     transactions: PreviewItem[];
     investment_transactions: PreviewItem[];
   } | null;
-}
-
-export type DuplicateAction = 'approve' | 'reject' | 'undo_reject';
-
-export interface BulkDuplicateReviewItem {
-  temp_id: string;
-  action: DuplicateAction;
+  rejected: {
+    transactions: PreviewItem[];
+    investment_transactions: PreviewItem[];
+  } | null;
 }
 
 export interface BulkActionResponse extends PreviewResponse {

@@ -82,13 +82,13 @@ export function DeleteCategoryDialog({
               {deleteCategory.isPending ? 'Deleting...' : 'Force Delete'}
             </Button>
           ) : (
-            <AlertDialogAction
-              onClick={() => handleDelete(false)}
+            <Button
+              variant="destructive"
               disabled={deleteCategory.isPending}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => handleDelete(false)}
             >
               {deleteCategory.isPending ? 'Deleting...' : 'Delete'}
-            </AlertDialogAction>
+            </Button>
           )}
         </AlertDialogFooter>
       </AlertDialogContent>

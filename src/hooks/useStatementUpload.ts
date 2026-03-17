@@ -3,8 +3,6 @@ import { apiFetch, apiUpload } from '@/lib/api';
 import type {
   PreviewResponse,
   ConfirmResponse,
-  DuplicateAction,
-  BulkDuplicateReviewItem,
   BulkActionResponse,
   PreviewSessionInfo,
   UploadJob,
@@ -65,20 +63,6 @@ export function useCancelSession() {
   });
 }
 
-export function useReviewDuplicate(sessionId: string) {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ tempId, action }: { tempId: string; action: DuplicateAction }) =>
-      apiFetch<PreviewResponse>(`/uploads/preview/${sessionId}/review-duplicate`, {
-        method: 'POST',
-        body: JSON.stringify({ temp_id: tempId, action }),
-      }),
-    onSuccess: (data) => {
-      qc.setQueryData(uploadKeys.preview(sessionId), data);
-    },
-  });
-}
-
 export function useEditPreviewTransaction(sessionId: string) {
   return useMutation({
     mutationFn: (payload: { temp_id: string; edited_data: Record<string, unknown> }) =>
@@ -103,7 +87,7 @@ export function useBulkEditPreview(sessionId: string) {
   });
 }
 
-export function useRejectUniqueItem(sessionId: string) {
+export function useRejectItem(sessionId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (tempId: string) =>
@@ -117,13 +101,13 @@ export function useRejectUniqueItem(sessionId: string) {
   });
 }
 
-export function useBulkReviewDuplicate(sessionId: string) {
+export function useBulkRejectItem(sessionId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (items: BulkDuplicateReviewItem[]) =>
+    mutationFn: (tempIds: string[]) =>
       apiFetch<BulkActionResponse>(
-        `/uploads/preview/${sessionId}/bulk-review-duplicate`,
-        { method: 'POST', body: JSON.stringify({ items }) },
+        `/uploads/preview/${sessionId}/bulk-reject-item`,
+        { method: 'POST', body: JSON.stringify({ temp_ids: tempIds }) },
       ),
     onSuccess: (data) => {
       qc.setQueryData(uploadKeys.preview(sessionId), data);
@@ -131,12 +115,26 @@ export function useBulkReviewDuplicate(sessionId: string) {
   });
 }
 
-export function useBulkRejectItem(sessionId: string) {
+export function useRestoreItem(sessionId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (tempId: string) =>
+      apiFetch<PreviewResponse>(`/uploads/preview/${sessionId}/restore-item`, {
+        method: 'POST',
+        body: JSON.stringify({ temp_id: tempId }),
+      }),
+    onSuccess: (data) => {
+      qc.setQueryData(uploadKeys.preview(sessionId), data);
+    },
+  });
+}
+
+export function useBulkRestoreItem(sessionId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (tempIds: string[]) =>
       apiFetch<BulkActionResponse>(
-        `/uploads/preview/${sessionId}/bulk-reject-item`,
+        `/uploads/preview/${sessionId}/bulk-restore-item`,
         { method: 'POST', body: JSON.stringify({ temp_ids: tempIds }) },
       ),
     onSuccess: (data) => {

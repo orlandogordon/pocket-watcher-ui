@@ -24,10 +24,10 @@ export function TagsPage() {
   const [editTag, setEditTag] = useState<TagResponse | undefined>();
   const [deleteTarget, setDeleteTarget] = useState<TagResponse | null>(null);
 
-  // Build a map of tag_uuid → TagStats for O(1) lookup
+  // Build a map of tag id → TagStats for O(1) lookup
   const statsMap = new Map<string, TagStats>();
   for (const s of statsData ?? []) {
-    statsMap.set(s.tag_uuid, s);
+    statsMap.set(s.id, s);
   }
 
   function openCreate() {
@@ -131,6 +131,7 @@ export function TagsPage() {
         open={!!deleteTarget}
         onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}
         tag={deleteTarget}
+        transactionCount={deleteTarget ? (statsMap.get(deleteTarget.id)?.transaction_count ?? 0) : 0}
       />
     </div>
   );

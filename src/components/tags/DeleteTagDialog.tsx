@@ -1,6 +1,6 @@
+import { useState } from 'react';
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -8,6 +8,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { Button } from '@/components/ui/button';
 import { useDeleteTag } from '@/hooks/useTags';
 import type { TagResponse } from '@/types/transactions';
 
@@ -15,36 +16,60 @@ interface DeleteTagDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   tag: TagResponse | null;
+  transactionCount?: number;
 }
 
-export function DeleteTagDialog({ open, onOpenChange, tag }: DeleteTagDialogProps) {
+export function DeleteTagDialog({ open, onOpenChange, tag, transactionCount = 0 }: DeleteTagDialogProps) {
+  const [confirmed, setConfirmed] = useState(false);
   const deleteTag = useDeleteTag();
+  const hasTransactions = transactionCount > 0;
 
   function handleDelete() {
     if (!tag) return;
+    if (hasTransactions && !confirmed) {
+      setConfirmed(true);
+      return;
+    }
     deleteTag.mutate(tag.id, { onSuccess: () => onOpenChange(false) });
   }
 
+  function handleOpenChange(next: boolean) {
+    if (!next) setConfirmed(false);
+    onOpenChange(next);
+  }
+
   return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
+    <AlertDialog open={open} onOpenChange={handleOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Delete Tag</AlertDialogTitle>
-          <AlertDialogDescription>
-            Are you sure you want to delete the tag{' '}
-            <span className="font-medium">{tag?.tag_name}</span>? It will be removed from all
-            transactions. This action cannot be undone.
+          <AlertDialogDescription asChild>
+            <div className="space-y-2">
+              {confirmed ? (
+                <>
+                  <p className="text-destructive font-medium">
+                    This tag is used by {transactionCount} transaction{transactionCount !== 1 ? 's' : ''}. It will be removed from all of them.
+                  </p>
+                  <p className="text-sm text-muted-foreground">This action cannot be undone.</p>
+                </>
+              ) : (
+                <p>
+                  Are you sure you want to delete the tag{' '}
+                  <span className="font-medium">{tag?.tag_name}</span>? This action cannot be undone.
+                </p>
+              )}
+            </div>
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction
-            onClick={handleDelete}
+          <Button
+            variant="destructive"
             disabled={deleteTag.isPending}
-            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            onClick={handleDelete}
           >
-            {deleteTag.isPending ? 'Deleting...' : 'Delete'}
-          </AlertDialogAction>
+            {deleteTag.isPending ? 'Deleting...' : confirmed ? 'Delete & Remove from Transactions' : 'Delete'}
+          </Button>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

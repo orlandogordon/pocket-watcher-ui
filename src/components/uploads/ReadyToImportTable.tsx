@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { Undo2 } from 'lucide-react';
+import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
@@ -19,6 +19,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { formatCurrency } from '@/lib/format';
 import { useCategories, buildCategoryMap } from '@/hooks/useCategories';
 import { useTags } from '@/hooks/useTags';
 import type { CategoryResponse } from '@/types/categories';
@@ -26,20 +27,26 @@ import type { TagResponse } from '@/types/transactions';
 import type { PreviewItem } from '@/types/uploads';
 import { useRowEdits, isInvestmentItem, TagsCell, TX_TYPES, SECURITY_TYPES, type RowEdits } from './PendingReviewTable';
 
+const DUPLICATE_TYPE_LABELS: Record<string, string> = {
+  database: 'DB Match',
+  within_statement: 'In Statement',
+  both: 'DB + Statement',
+};
+
 interface ReadyToImportTableProps {
   items: PreviewItem[];
-  onMoveToReview: (tempId: string) => void;
-  onBulkMoveToReview: (tempIds: string[]) => void;
+  onReject: (tempId: string) => void;
+  onBulkReject: (tempIds: string[]) => void;
   onEditSave: (tempId: string, edits: RowEdits) => void;
   isPending: boolean;
   pendingTempId: string | null;
 }
 
 function ReadyRow({
-  item, onMoveToReview, onEditSave, isPending, pendingTempId, selected, onToggleSelect, categories, categoryMap, allTags, showInvestmentCols, showRegularCols,
+  item, onReject, onEditSave, isPending, pendingTempId, selected, onToggleSelect, categories, categoryMap, allTags, showInvestmentCols, showRegularCols,
 }: {
   item: PreviewItem;
-  onMoveToReview: (tempId: string) => void;
+  onReject: (tempId: string) => void;
   onEditSave: (tempId: string, edits: RowEdits) => void;
   isPending: boolean;
   pendingTempId: string | null;
@@ -99,17 +106,32 @@ function ReadyRow({
           placeholder="YYYY-MM-DD"
         />
       </TableCell>
-      {/* Description + Merchant */}
+      {/* Description + Merchant + Duplicate indicator */}
       <TableCell>
         <div className="flex flex-col gap-1">
-          <Input
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            onBlur={() => saveEdits()}
-            className="h-7 text-xs"
-            disabled={disabled}
-            placeholder="Description"
-          />
+          <div className="flex items-center gap-1.5">
+            <Input
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              onBlur={() => saveEdits()}
+              className="h-7 text-xs"
+              disabled={disabled}
+              placeholder="Description"
+            />
+            {item.duplicate_type && (
+              <Badge
+                variant="secondary"
+                className="text-[10px] shrink-0 bg-amber-100 text-amber-700 border-amber-200"
+                title={
+                  item.duplicate_info?.existing_transaction
+                    ? `Duplicate: ${item.duplicate_info.existing_transaction.description} · ${formatCurrency(parseFloat(item.duplicate_info.existing_transaction.total_amount ?? item.duplicate_info.existing_transaction.amount ?? '0'))} · ${item.duplicate_info.existing_transaction.transaction_date}`
+                    : `Duplicate (${DUPLICATE_TYPE_LABELS[item.duplicate_type] ?? item.duplicate_type})`
+                }
+              >
+                {DUPLICATE_TYPE_LABELS[item.duplicate_type] ?? 'Dup'}
+              </Badge>
+            )}
+          </div>
           <Input
             value={merchantName}
             onChange={(e) => setMerchantName(e.target.value)}
@@ -245,37 +267,25 @@ function ReadyRow({
           placeholder="Notes"
         />
       </TableCell>
-      {/* Source */}
-      <TableCell>
-        {item.source === 'approved_duplicate' ? (
-          <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700 border-blue-200">
-            Approved
-          </Badge>
-        ) : (
-          <Badge variant="outline" className="text-xs text-muted-foreground">
-            New
-          </Badge>
-        )}
-      </TableCell>
       {/* Actions */}
       <TableCell>
         <Button
           size="sm"
           variant="outline"
-          className="h-7 text-xs"
+          className="h-7 text-xs text-destructive border-destructive/40 hover:bg-destructive/10 hover:text-destructive"
           disabled={disabled}
-          onClick={() => onMoveToReview(item.temp_id)}
-          title="Move back to Needs Review"
+          onClick={() => onReject(item.temp_id)}
+          title="Reject this item"
         >
-          <Undo2 className="h-3 w-3 mr-1" />
-          Review
+          <X className="h-3 w-3 mr-1" />
+          Reject
         </Button>
       </TableCell>
     </TableRow>
   );
 }
 
-export function ReadyToImportTable({ items, onMoveToReview, onBulkMoveToReview, onEditSave, isPending, pendingTempId }: ReadyToImportTableProps) {
+export function ReadyToImportTable({ items, onReject, onBulkReject, onEditSave, isPending, pendingTempId }: ReadyToImportTableProps) {
   const { data: categoriesData = [] } = useCategories();
   const categoryMap = buildCategoryMap(categoriesData);
   const { data: allTags = [] } = useTags();
@@ -300,8 +310,8 @@ export function ReadyToImportTable({ items, onMoveToReview, onBulkMoveToReview, 
     setSelected(allSelected ? new Set() : new Set(items.map((i) => i.temp_id)));
   }
 
-  function handleBulkMoveToReview() {
-    onBulkMoveToReview([...selected]);
+  function handleBulkReject() {
+    onBulkReject([...selected]);
     setSelected(new Set());
   }
 
@@ -346,7 +356,6 @@ export function ReadyToImportTable({ items, onMoveToReview, onBulkMoveToReview, 
               )}
               <TableHead className="w-36">Tags</TableHead>
               <TableHead className="w-36">Notes</TableHead>
-              <TableHead className="w-28">Source</TableHead>
               <TableHead className="w-28">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -355,7 +364,7 @@ export function ReadyToImportTable({ items, onMoveToReview, onBulkMoveToReview, 
               <ReadyRow
                 key={item.temp_id}
                 item={item}
-                onMoveToReview={onMoveToReview}
+                onReject={onReject}
                 onEditSave={onEditSave}
                 isPending={isPending}
                 pendingTempId={pendingTempId}
@@ -377,12 +386,12 @@ export function ReadyToImportTable({ items, onMoveToReview, onBulkMoveToReview, 
           <Button
             size="sm"
             variant="outline"
-            className="h-7 text-xs"
-            onClick={handleBulkMoveToReview}
+            className="h-7 text-xs text-destructive border-destructive/40 hover:bg-destructive/10 hover:text-destructive"
+            onClick={handleBulkReject}
             disabled={isPending}
           >
-            <Undo2 className="h-3 w-3 mr-1" />
-            Move to Review
+            <X className="h-3 w-3 mr-1" />
+            Reject Selected
           </Button>
         </div>
       )}
