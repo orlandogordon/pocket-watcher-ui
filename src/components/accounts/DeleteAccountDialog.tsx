@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -11,6 +10,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { useDeleteAccount } from '@/hooks/useAccounts';
+import { ApiError } from '@/lib/api';
 import type { AccountResponse } from '@/types/accounts';
 
 interface DeleteAccountDialogProps {
@@ -20,25 +20,28 @@ interface DeleteAccountDialogProps {
 }
 
 export function DeleteAccountDialog({ open, onOpenChange, account }: DeleteAccountDialogProps) {
-  const [conflictError, setConflictError] = useState(false);
+  const [conflictMessage, setConflictMessage] = useState<string | null>(null);
   const deleteAccount = useDeleteAccount();
 
-  function handleDelete() {
+  function handleDelete(force = false) {
     if (!account) return;
-    setConflictError(false);
-    deleteAccount.mutate(account.uuid, {
-      onSuccess: () => onOpenChange(false),
-      onError: (err) => {
-        if (err.message.toLowerCase().includes('transaction') || err.message.includes('409')) {
-          setConflictError(true);
-        }
+    setConflictMessage(null);
+    deleteAccount.mutate(
+      { uuid: account.uuid, force },
+      {
+        onSuccess: () => onOpenChange(false),
+        onError: (err) => {
+          if (!force && err instanceof ApiError && err.status === 409) {
+            setConflictMessage(err.message);
+          }
+        },
       },
-    });
+    );
   }
 
-  function handleOpenChange(open: boolean) {
-    if (!open) setConflictError(false);
-    onOpenChange(open);
+  function handleOpenChange(next: boolean) {
+    if (!next) setConflictMessage(null);
+    onOpenChange(next);
   }
 
   return (
@@ -46,27 +49,43 @@ export function DeleteAccountDialog({ open, onOpenChange, account }: DeleteAccou
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Delete Account</AlertDialogTitle>
-          <AlertDialogDescription>
-            {conflictError ? (
-              <span className="text-destructive font-medium">
-                This account has transactions and cannot be deleted.
-              </span>
-            ) : (
-              <>
-                Are you sure you want to delete{' '}
-                <span className="font-medium">{account?.account_name}</span>? This action cannot
-                be undone.
-              </>
-            )}
+          <AlertDialogDescription asChild>
+            <div className="space-y-2">
+              {conflictMessage ? (
+                <>
+                  <p className="text-destructive font-medium">{conflictMessage}</p>
+                  <p className="text-sm text-muted-foreground">
+                    Force-deleting will permanently remove all transactions, investment holdings,
+                    debt plan links, and balance history for this account. Debt payments sourced
+                    from this account will have their source cleared, and upload job references
+                    will be unlinked.
+                  </p>
+                </>
+              ) : (
+                <p>
+                  Are you sure you want to delete{' '}
+                  <span className="font-medium">{account?.account_name}</span>? This action cannot
+                  be undone.
+                </p>
+              )}
+            </div>
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
-          {!conflictError && (
+          {conflictMessage ? (
             <Button
               variant="destructive"
               disabled={deleteAccount.isPending}
-              onClick={handleDelete}
+              onClick={() => handleDelete(true)}
+            >
+              {deleteAccount.isPending ? 'Deleting...' : 'Delete Account & All Data'}
+            </Button>
+          ) : (
+            <Button
+              variant="destructive"
+              disabled={deleteAccount.isPending}
+              onClick={() => handleDelete(false)}
             >
               {deleteAccount.isPending ? 'Deleting...' : 'Delete'}
             </Button>

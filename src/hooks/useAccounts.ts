@@ -47,10 +47,19 @@ export function useUpdateAccount() {
 export function useDeleteAccount() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (uuid: string) =>
-      apiFetch<void>(`/accounts/${uuid}`, { method: 'DELETE' }),
-    onSuccess: () => {
+    mutationFn: ({ uuid, force }: { uuid: string; force?: boolean }) =>
+      apiFetch<void>(`/accounts/${uuid}${force ? '?force=true' : ''}`, {
+        method: 'DELETE',
+      }),
+    onSuccess: (_data, { force }) => {
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      if (force) {
+        queryClient.invalidateQueries({ queryKey: ['transactions'] });
+        queryClient.invalidateQueries({ queryKey: ['investments'] });
+        queryClient.invalidateQueries({ queryKey: ['debt'] });
+        queryClient.invalidateQueries({ queryKey: ['account-history'] });
+        queryClient.invalidateQueries({ queryKey: ['upload-jobs'] });
+      }
     },
   });
 }
