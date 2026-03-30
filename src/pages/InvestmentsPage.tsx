@@ -1,8 +1,9 @@
 import { Link } from 'react-router-dom';
-import { TrendingUp } from 'lucide-react';
+import { RefreshCw, TrendingUp } from 'lucide-react';
 import { useAccounts } from '@/hooks/useAccounts';
-import { useInvestmentHoldings } from '@/hooks/useInvestments';
+import { useInvestmentHoldings, useRefreshPrices } from '@/hooks/useInvestments';
 import { formatCurrency } from '@/lib/format';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 function AccountCard({ account }: { account: { uuid: string; account_name: string; institution_name: string; balance: string } }) {
@@ -68,6 +69,7 @@ function AccountCard({ account }: { account: { uuid: string; account_name: strin
 
 export function InvestmentsPage() {
   const { data: accounts, isLoading, isError } = useAccounts();
+  const refreshPrices = useRefreshPrices();
 
   const investmentAccounts = (accounts ?? []).filter(
     (a) => a.account_type === 'INVESTMENT',
@@ -75,11 +77,24 @@ export function InvestmentsPage() {
 
   return (
     <div className="flex flex-col gap-6 p-6">
-      <div>
-        <h1 className="text-xl font-semibold">Investments</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">
-          Portfolio overview across all investment accounts.
-        </p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-xl font-semibold">Investments</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Portfolio overview across all investment accounts.
+          </p>
+        </div>
+        {investmentAccounts.length > 0 && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => refreshPrices.mutate()}
+            disabled={refreshPrices.isPending}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${refreshPrices.isPending ? 'animate-spin' : ''}`} />
+            {refreshPrices.isPending ? 'Refreshing...' : 'Refresh Prices'}
+          </Button>
+        )}
       </div>
 
       {isLoading ? (

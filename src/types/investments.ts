@@ -23,6 +23,12 @@ export interface InvestmentHoldingResponse {
   created_at: string;
 }
 
+export interface InvestmentAccountSummary {
+  cash_balance: string;
+  securities_value: string;
+  total_value: string;
+}
+
 export interface InvestmentTransactionResponse {
   id: string;
   account_uuid: string;

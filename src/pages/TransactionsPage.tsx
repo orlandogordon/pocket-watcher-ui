@@ -422,7 +422,11 @@ export function TransactionsPage() {
                     </TableCell>
                     <TableCell
                       className={`text-right font-medium tabular-nums ${
-                        isExpense ? 'text-red-500' : 'text-green-600'
+                        tx.transaction_type === 'TRANSFER'
+                          ? 'text-muted-foreground'
+                          : isExpense
+                            ? 'text-red-500'
+                            : 'text-green-600'
                       }`}
                     >
                       {isExpense ? `−${formatCurrency(tx.amount)}` : formatCurrency(tx.amount)}

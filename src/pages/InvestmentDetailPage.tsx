@@ -5,6 +5,7 @@ import { ArrowLeft, Plus, Pencil, Trash2, X, ChevronUp, ChevronDown } from 'luci
 import { useAccounts } from '@/hooks/useAccounts';
 import {
   useInvestmentHoldings,
+  useInvestmentAccountSummary,
   useInvestmentTransactions,
 } from '@/hooks/useInvestments';
 import { formatCurrency } from '@/lib/format';
@@ -74,6 +75,7 @@ export function InvestmentDetailPage() {
   const { data: accounts } = useAccounts();
   const account = accounts?.find((a) => a.uuid === accountUuid);
   const { data: holdings, isLoading: holdingsLoading } = useInvestmentHoldings(accountUuid ?? '');
+  const { data: summary } = useInvestmentAccountSummary(accountUuid ?? '');
   const { data: transactions, isLoading: txLoading } = useInvestmentTransactions(accountUuid ?? '');
 
   // Transaction dialogs
@@ -204,7 +206,10 @@ export function InvestmentDetailPage() {
           <>
             <h1 className="text-xl font-semibold">{account.account_name}</h1>
             <p className="text-sm text-muted-foreground">
-              {account.institution_name} &middot; Balance: {formatCurrency(account.balance)}
+              {account.institution_name}
+              {summary && (
+                <> &middot; Cash: {formatCurrency(summary.cash_balance)} &middot; Securities: {formatCurrency(summary.securities_value)} &middot; Total: {formatCurrency(summary.total_value)}</>
+              )}
             </p>
           </>
         ) : (
