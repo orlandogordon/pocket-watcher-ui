@@ -34,13 +34,14 @@ import type {
   InvestmentTransactionResponse,
   InvestmentTransactionType,
 } from '@/types/investments';
+import { formatTypeLabel } from '@/lib/format';
 
 const TRANSACTION_TYPES: InvestmentTransactionType[] = [
-  'BUY', 'SELL', 'DIVIDEND', 'INTEREST', 'FEE', 'TRANSFER', 'REINVESTMENT', 'OTHER',
+  'BUY', 'SELL', 'DIVIDEND', 'INTEREST', 'FEE', 'TRANSFER_IN', 'TRANSFER_OUT', 'REINVESTMENT', 'OTHER',
 ];
 
 const schema = z.object({
-  transaction_type: z.enum(['BUY', 'SELL', 'DIVIDEND', 'INTEREST', 'FEE', 'TRANSFER', 'REINVESTMENT', 'OTHER']),
+  transaction_type: z.enum(['BUY', 'SELL', 'DIVIDEND', 'INTEREST', 'FEE', 'TRANSFER_IN', 'TRANSFER_OUT', 'REINVESTMENT', 'OTHER']),
   symbol: z.string().optional(),
   quantity: z.string().optional(),
   price_per_share: z.string().optional(),
@@ -148,7 +149,7 @@ export function InvestmentTransactionFormDialog({
                     <SelectContent>
                       {TRANSACTION_TYPES.map((t) => (
                         <SelectItem key={t} value={t}>
-                          {t}
+                          {formatTypeLabel(t)}
                         </SelectItem>
                       ))}
                     </SelectContent>

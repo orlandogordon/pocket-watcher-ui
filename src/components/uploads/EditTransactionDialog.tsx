@@ -29,8 +29,9 @@ import { Button } from '@/components/ui/button';
 import { useCategories, buildCategoryMap, getCategoryLabel } from '@/hooks/useCategories';
 import { useEditPreviewTransaction } from '@/hooks/useStatementUpload';
 import type { PreviewItem, EditedData } from '@/types/uploads';
+import { formatTypeLabel } from '@/lib/format';
 
-const TRANSACTION_TYPES = ['PURCHASE', 'WITHDRAWAL', 'FEE', 'DEPOSIT', 'CREDIT', 'INTEREST', 'TRANSFER'] as const;
+const TRANSACTION_TYPES = ['PURCHASE', 'WITHDRAWAL', 'FEE', 'DEPOSIT', 'CREDIT', 'INTEREST', 'TRANSFER_IN', 'TRANSFER_OUT'] as const;
 
 const schema = z.object({
   description: z.string().optional(),
@@ -162,7 +163,7 @@ export function EditTransactionDialog({ open, onOpenChange, item, sessionId }: E
                       <SelectContent>
                         {TRANSACTION_TYPES.map((t) => (
                           <SelectItem key={t} value={t}>
-                            {t}
+                            {formatTypeLabel(t)}
                           </SelectItem>
                         ))}
                       </SelectContent>

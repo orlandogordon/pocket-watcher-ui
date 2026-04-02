@@ -15,7 +15,7 @@ import { useAccountStats } from '@/hooks/useAccounts';
 import { useTransactions } from '@/hooks/useTransactions';
 import { useBudgetMonth, useBudgetMonthPerformance } from '@/hooks/useBudgets';
 import { useNetWorthHistory } from '@/hooks/useNetWorthHistory';
-import { formatCurrency } from '@/lib/format';
+import { formatCurrency, formatTypeLabel } from '@/lib/format';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -241,7 +241,7 @@ export function DashboardPage() {
                     </td>
                     <td className="py-2">
                       <Badge variant="outline" className="text-xs">
-                        {txn.transaction_type}
+                        {formatTypeLabel(txn.transaction_type)}
                       </Badge>
                     </td>
                     <td className={`py-2 text-right font-medium tabular-nums ${amountClass(txn.amount)}`}>

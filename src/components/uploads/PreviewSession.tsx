@@ -16,7 +16,7 @@ import {
 import { ReadyToImportTable } from './ReadyToImportTable';
 import { RejectedTable } from './RejectedTable';
 import type { ConfirmResponse } from '@/types/uploads';
-import type { RowEdits } from './PendingReviewTable';
+import type { RowEdits } from './upload-utils';
 
 interface PreviewSessionProps {
   sessionId: string;

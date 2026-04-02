@@ -5,7 +5,7 @@ import { useTransactions, useTransactionStats } from '@/hooks/useTransactions';
 import { useAccounts } from '@/hooks/useAccounts';
 import { useCategories } from '@/hooks/useCategories';
 import { useTags } from '@/hooks/useTags';
-import { formatCurrency } from '@/lib/format';
+import { formatCurrency, formatTypeLabel } from '@/lib/format';
 import { TransactionFormDialog } from '@/components/transactions/TransactionFormDialog';
 import { DeleteTransactionDialog } from '@/components/transactions/DeleteTransactionDialog';
 import { ManageTagsDialog } from '@/components/tags/ManageTagsDialog';
@@ -47,7 +47,8 @@ const TRANSACTION_TYPES = [
   'DEPOSIT',
   'CREDIT',
   'INTEREST',
-  'TRANSFER',
+  'TRANSFER_IN',
+  'TRANSFER_OUT',
 ] as const;
 
 const EXPENSE_TYPES = new Set(['PURCHASE', 'WITHDRAWAL', 'FEE']);
@@ -242,7 +243,7 @@ export function TransactionsPage() {
             <SelectItem value="_all_">All types</SelectItem>
             {TRANSACTION_TYPES.map((t) => (
               <SelectItem key={t} value={t}>
-                {t}
+                {formatTypeLabel(t)}
               </SelectItem>
             ))}
           </SelectContent>
@@ -422,7 +423,7 @@ export function TransactionsPage() {
                     </TableCell>
                     <TableCell
                       className={`text-right font-medium tabular-nums ${
-                        tx.transaction_type === 'TRANSFER'
+                        tx.transaction_type === 'TRANSFER_IN' || tx.transaction_type === 'TRANSFER_OUT'
                           ? 'text-muted-foreground'
                           : isExpense
                             ? 'text-red-500'
@@ -432,7 +433,7 @@ export function TransactionsPage() {
                       {isExpense ? `−${formatCurrency(tx.amount)}` : formatCurrency(tx.amount)}
                     </TableCell>
                     <TableCell>
-                      <Badge variant="secondary">{tx.transaction_type}</Badge>
+                      <Badge variant="secondary">{formatTypeLabel(tx.transaction_type)}</Badge>
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline" className="text-xs">

@@ -31,6 +31,7 @@ import { useCreateTransaction, useUpdateTransaction } from '@/hooks/useTransacti
 import { useAccounts } from '@/hooks/useAccounts';
 import { useCategories } from '@/hooks/useCategories';
 import type { TransactionCreate, TransactionResponse } from '@/types/transactions';
+import { formatTypeLabel } from '@/lib/format';
 
 const TRANSACTION_TYPES = [
   'PURCHASE',
@@ -39,7 +40,8 @@ const TRANSACTION_TYPES = [
   'DEPOSIT',
   'CREDIT',
   'INTEREST',
-  'TRANSFER',
+  'TRANSFER_IN',
+  'TRANSFER_OUT',
 ] as const;
 
 const schema = z.object({
@@ -235,7 +237,7 @@ export function TransactionFormDialog({
                       <SelectContent>
                         {TRANSACTION_TYPES.map((t) => (
                           <SelectItem key={t} value={t}>
-                            {t}
+                            {formatTypeLabel(t)}
                           </SelectItem>
                         ))}
                       </SelectContent>

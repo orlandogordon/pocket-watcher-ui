@@ -11,9 +11,9 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { formatCurrency } from '@/lib/format';
+import { formatCurrency, formatTypeLabel } from '@/lib/format';
 import type { PreviewItem } from '@/types/uploads';
-import { isInvestmentItem } from './PendingReviewTable';
+import { isInvestmentItem } from './upload-utils';
 
 const DUPLICATE_TYPE_LABELS: Record<string, string> = {
   database: 'DB Match',
@@ -63,7 +63,7 @@ function RejectedRow({
           <TableCell className="text-xs text-right">{String(edited.price_per_share ?? pd.price_per_share ?? '')}</TableCell>
         </>
       )}
-      <TableCell className="text-xs">{String(edited.transaction_type ?? pd.transaction_type)}</TableCell>
+      <TableCell className="text-xs">{formatTypeLabel(String(edited.transaction_type ?? pd.transaction_type))}</TableCell>
       {/* Rejection reason */}
       <TableCell>
         {item.rejection_reason === 'unmapped_type' ? (

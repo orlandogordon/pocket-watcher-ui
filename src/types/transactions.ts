@@ -11,7 +11,7 @@ export interface EmbeddedCategory {
   parent_category_uuid: string | null;
 }
 
-export type TransactionType = 'PURCHASE' | 'WITHDRAWAL' | 'FEE' | 'DEPOSIT' | 'CREDIT' | 'INTEREST' | 'TRANSFER';
+export type TransactionType = 'PURCHASE' | 'WITHDRAWAL' | 'FEE' | 'DEPOSIT' | 'CREDIT' | 'INTEREST' | 'TRANSFER_IN' | 'TRANSFER_OUT';
 
 export interface SplitAllocationResponse {
   id: string;

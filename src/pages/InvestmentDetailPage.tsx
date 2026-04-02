@@ -8,7 +8,7 @@ import {
   useInvestmentAccountSummary,
   useInvestmentTransactions,
 } from '@/hooks/useInvestments';
-import { formatCurrency } from '@/lib/format';
+import { formatCurrency, formatTypeLabel } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -39,7 +39,8 @@ const TX_TYPE_COLORS: Record<InvestmentTransactionType, string> = {
   DIVIDEND: 'bg-purple-100 text-purple-800',
   INTEREST: 'bg-indigo-100 text-indigo-800',
   FEE: 'bg-red-100 text-red-800',
-  TRANSFER: 'bg-yellow-100 text-yellow-800',
+  TRANSFER_IN: 'bg-gray-100 text-gray-800',
+  TRANSFER_OUT: 'bg-gray-100 text-gray-800',
   SPLIT: 'bg-amber-100 text-amber-800',
   MERGER: 'bg-teal-100 text-teal-800',
   SPINOFF: 'bg-pink-100 text-pink-800',
@@ -381,10 +382,10 @@ export function InvestmentDetailPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Types</SelectItem>
-                  {(['BUY', 'SELL', 'DIVIDEND', 'INTEREST', 'FEE', 'TRANSFER', 'SPLIT', 'MERGER', 'SPINOFF', 'REINVESTMENT', 'OTHER'] as const).map(
+                  {(['BUY', 'SELL', 'DIVIDEND', 'INTEREST', 'FEE', 'TRANSFER_IN', 'TRANSFER_OUT', 'SPLIT', 'MERGER', 'SPINOFF', 'REINVESTMENT', 'OTHER'] as const).map(
                     (t) => (
                       <SelectItem key={t} value={t}>
-                        {t}
+                        {formatTypeLabel(t)}
                       </SelectItem>
                     ),
                   )}
@@ -486,7 +487,7 @@ export function InvestmentDetailPage() {
                         variant="secondary"
                         className={cn('text-xs', TX_TYPE_COLORS[tx.transaction_type])}
                       >
-                        {tx.transaction_type}
+                        {formatTypeLabel(tx.transaction_type)}
                       </Badge>
                     </TableCell>
                     <TableCell className="font-medium" title={tx.api_symbol && tx.api_symbol !== tx.symbol ? `${tx.symbol} (${tx.api_symbol})` : tx.symbol ?? undefined}>

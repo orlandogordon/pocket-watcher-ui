@@ -19,13 +19,14 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { formatCurrency } from '@/lib/format';
+import { formatCurrency, formatTypeLabel } from '@/lib/format';
 import { useCategories, buildCategoryMap } from '@/hooks/useCategories';
 import { useTags } from '@/hooks/useTags';
 import type { CategoryResponse } from '@/types/categories';
 import type { TagResponse } from '@/types/transactions';
 import type { PreviewItem } from '@/types/uploads';
-import { useRowEdits, isInvestmentItem, TagsCell, TX_TYPES, SECURITY_TYPES, type RowEdits } from './PendingReviewTable';
+import { useRowEdits, isInvestmentItem, TX_TYPES, SECURITY_TYPES, type RowEdits } from './upload-utils';
+import { TagsCell } from './TagsCell';
 
 const DUPLICATE_TYPE_LABELS: Record<string, string> = {
   database: 'DB Match',
@@ -172,7 +173,7 @@ function ReadyRow({
               </SelectTrigger>
               <SelectContent>
                 {SECURITY_TYPES.map((t) => (
-                  <SelectItem key={t} value={t} className="text-xs">{t}</SelectItem>
+                  <SelectItem key={t} value={t} className="text-xs">{formatTypeLabel(t)}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -207,7 +208,7 @@ function ReadyRow({
           </SelectTrigger>
           <SelectContent>
             {TX_TYPES.map((t) => (
-              <SelectItem key={t} value={t} className="text-xs">{t}</SelectItem>
+              <SelectItem key={t} value={t} className="text-xs">{formatTypeLabel(t)}</SelectItem>
             ))}
           </SelectContent>
         </Select>
