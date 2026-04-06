@@ -12,6 +12,8 @@ export function TagsCell({
   onToggle: (uuid: string) => void;
   disabled: boolean;
 }) {
+  const userTags = allTags.filter((t) => !t.is_system);
+
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -30,11 +32,11 @@ export function TagsCell({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-48 p-2" align="start">
-        {allTags.length === 0 ? (
+        {userTags.length === 0 ? (
           <p className="text-xs text-muted-foreground px-1">No tags available</p>
         ) : (
           <div className="space-y-1">
-            {allTags.map((tag) => (
+            {userTags.map((tag) => (
               <div
                 key={tag.id}
                 className="flex items-center gap-2 rounded px-1 py-0.5 cursor-pointer hover:bg-muted"

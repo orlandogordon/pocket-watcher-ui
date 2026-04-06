@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X } from 'lucide-react';
+import { X, Lock } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -39,7 +39,7 @@ export function ManageTagsDialog({
   const removeTag = useRemoveTagFromTransaction();
 
   const currentTagIds = new Set((transaction?.tags ?? []).map((t) => t.id));
-  const availableTags = allTags.filter((t) => !currentTagIds.has(t.id));
+  const availableTags = allTags.filter((t) => !currentTagIds.has(t.id) && !t.is_system);
 
   function handleAdd() {
     if (!transactionId || !selectedTagId) return;
@@ -82,15 +82,19 @@ export function ManageTagsDialog({
                     style={{ backgroundColor: tag.color }}
                   >
                     {tag.tag_name}
-                    <button
-                      type="button"
-                      onClick={() => handleRemove(tag.id)}
-                      disabled={removeTag.isPending}
-                      className="ml-0.5 rounded-full hover:opacity-75 cursor-pointer disabled:opacity-50"
-                      aria-label={`Remove ${tag.tag_name}`}
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
+                    {tag.is_system ? (
+                      <Lock className="ml-0.5 h-3 w-3 opacity-60" title="System tag — cannot remove" />
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => handleRemove(tag.id)}
+                        disabled={removeTag.isPending}
+                        className="ml-0.5 rounded-full hover:opacity-75 cursor-pointer disabled:opacity-50"
+                        aria-label={`Remove ${tag.tag_name}`}
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    )}
                   </span>
                 ))}
               </div>

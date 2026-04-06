@@ -249,14 +249,18 @@ function ReadyRow({
           </TableCell>
         </>
       )}
-      {/* Tags */}
-      <TableCell>
-        <TagsCell tagUuids={tagUuids} allTags={allTags} onToggle={(uuid) => {
-          const newTags = tagUuids.includes(uuid) ? tagUuids.filter((t) => t !== uuid) : [...tagUuids, uuid];
-          toggleTag(uuid);
-          saveEdits({ tag_uuids: newTags });
-        }} disabled={disabled} />
-      </TableCell>
+      {/* Tags (not supported for investment transactions) */}
+      {showRegularCols && (
+        <TableCell>
+          {!isInvestment && (
+            <TagsCell tagUuids={tagUuids} allTags={allTags} onToggle={(uuid) => {
+              const newTags = tagUuids.includes(uuid) ? tagUuids.filter((t) => t !== uuid) : [...tagUuids, uuid];
+              toggleTag(uuid);
+              saveEdits({ tag_uuids: newTags });
+            }} disabled={disabled} />
+          )}
+        </TableCell>
+      )}
       {/* Comments */}
       <TableCell>
         <Input
@@ -355,7 +359,7 @@ export function ReadyToImportTable({ items, onReject, onBulkReject, onEditSave, 
                   <TableHead className="w-40">Subcategory</TableHead>
                 </>
               )}
-              <TableHead className="w-36">Tags</TableHead>
+              {showRegularCols && <TableHead className="w-36">Tags</TableHead>}
               <TableHead className="w-36">Notes</TableHead>
               <TableHead className="w-28">Actions</TableHead>
             </TableRow>

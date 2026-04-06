@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, Lock } from 'lucide-react';
 import { useTags, useTagStats } from '@/hooks/useTags';
 import { TagFormDialog } from '@/components/tags/TagFormDialog';
 import { DeleteTagDialog } from '@/components/tags/DeleteTagDialog';
@@ -81,11 +81,16 @@ export function TagsPage() {
                 return (
                   <TableRow key={tag.id}>
                     <TableCell>
-                      <span
-                        className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium text-white"
-                        style={{ backgroundColor: tag.color }}
-                      >
-                        {tag.tag_name}
+                      <span className="inline-flex items-center gap-1.5">
+                        <span
+                          className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium text-white"
+                          style={{ backgroundColor: tag.color }}
+                        >
+                          {tag.tag_name}
+                        </span>
+                        {tag.is_system && (
+                          <Lock className="h-3 w-3 text-muted-foreground" title="System tag" />
+                        )}
                       </span>
                     </TableCell>
                     <TableCell className="text-right tabular-nums text-sm">
@@ -95,24 +100,26 @@ export function TagsPage() {
                       {stats ? formatCurrency(stats.total_amount) : '—'}
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-1">
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-7 w-7"
-                          onClick={() => openEdit(tag)}
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-7 w-7 text-destructive hover:text-destructive"
-                          onClick={() => setDeleteTarget(tag)}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
+                      {!tag.is_system && (
+                        <div className="flex items-center gap-1">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-7 w-7"
+                            onClick={() => openEdit(tag)}
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-7 w-7 text-destructive hover:text-destructive"
+                            onClick={() => setDeleteTarget(tag)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      )}
                     </TableCell>
                   </TableRow>
                 );

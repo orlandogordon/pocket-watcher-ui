@@ -140,6 +140,21 @@ export function UploadsPage() {
 
   return (
     <div className="p-6">
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-xl font-semibold">Uploads</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Import bank and brokerage statements.
+          </p>
+        </div>
+        <Button size="sm" variant="outline" asChild>
+          <Link to="/uploads/history">
+            <History className="mr-1 h-4 w-4" />
+            History
+          </Link>
+        </Button>
+      </div>
+
       {step.kind === 'form' && (
         <>
           <ActiveSessions onResume={(id) => setStep({ kind: 'preview', sessionId: id })} />

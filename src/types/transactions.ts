@@ -3,6 +3,7 @@ export interface TagResponse {
   tag_id: number;
   tag_name: string;
   color: string;
+  is_system: boolean;
 }
 
 export interface EmbeddedCategory {
