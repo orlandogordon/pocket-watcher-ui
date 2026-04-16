@@ -1,5 +1,8 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import { AuthProvider } from '@/contexts/AuthContext';
+import { RequireAuth } from '@/components/layout/RequireAuth';
 import { AppLayout } from '@/components/layout/AppLayout';
+import { SignInPage } from '@/pages/SignInPage';
 import { DashboardPage } from '@/pages/DashboardPage';
 import { AccountsPage } from '@/pages/AccountsPage';
 import { TransactionsPage } from '@/pages/TransactionsPage';
@@ -22,28 +25,33 @@ import { AdminPage } from '@/pages/AdminPage';
 export default function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route element={<AppLayout />}>
-          <Route index element={<DashboardPage />} />
-          <Route path="accounts" element={<AccountsPage />} />
-          <Route path="transactions" element={<TransactionsPage />} />
-          <Route path="categories" element={<CategoriesPage />} />
-          <Route path="tags" element={<TagsPage />} />
-          <Route path="budgets" element={<BudgetsPage />} />
-          <Route path="budgets/templates" element={<BudgetTemplatesPage />} />
-          <Route path="uploads" element={<UploadsPage />} />
-          <Route path="uploads/history" element={<UploadHistoryPage />} />
-          <Route path="investments" element={<InvestmentsPage />} />
-          <Route path="investments/:accountUuid" element={<InvestmentDetailPage />} />
-          <Route path="debt" element={<DebtPage />} />
-          <Route path="debt/:accountUuid" element={<DebtDetailPage />} />
-          <Route path="plans" element={<PlansPage />} />
-          <Route path="plans/:uuid" element={<PlanDetailPage />} />
-          <Route path="net-worth" element={<NetWorthPage />} />
-          <Route path="analytics" element={<AnalyticsPage />} />
-          <Route path="admin" element={<AdminPage />} />
-        </Route>
-      </Routes>
+      <AuthProvider>
+        <Routes>
+          <Route path="/sign-in" element={<SignInPage />} />
+          <Route element={<RequireAuth />}>
+            <Route element={<AppLayout />}>
+              <Route index element={<DashboardPage />} />
+              <Route path="accounts" element={<AccountsPage />} />
+              <Route path="transactions" element={<TransactionsPage />} />
+              <Route path="categories" element={<CategoriesPage />} />
+              <Route path="tags" element={<TagsPage />} />
+              <Route path="budgets" element={<BudgetsPage />} />
+              <Route path="budgets/templates" element={<BudgetTemplatesPage />} />
+              <Route path="uploads" element={<UploadsPage />} />
+              <Route path="uploads/history" element={<UploadHistoryPage />} />
+              <Route path="investments" element={<InvestmentsPage />} />
+              <Route path="investments/:accountUuid" element={<InvestmentDetailPage />} />
+              <Route path="debt" element={<DebtPage />} />
+              <Route path="debt/:accountUuid" element={<DebtDetailPage />} />
+              <Route path="plans" element={<PlansPage />} />
+              <Route path="plans/:uuid" element={<PlanDetailPage />} />
+              <Route path="net-worth" element={<NetWorthPage />} />
+              <Route path="analytics" element={<AnalyticsPage />} />
+              <Route path="admin" element={<AdminPage />} />
+            </Route>
+          </Route>
+        </Routes>
+      </AuthProvider>
     </BrowserRouter>
   );
 }

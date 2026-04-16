@@ -17,8 +17,10 @@ import {
   Sun,
   Moon,
   Monitor,
+  LogOut,
 } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 
 const primaryNav = [
@@ -76,6 +78,7 @@ const themeLabel = { system: 'System', light: 'Light', dark: 'Dark' } as const;
 
 export function AppLayout() {
   const { theme, setTheme } = useTheme();
+  const { user, logout } = useAuth();
 
   function cycleTheme() {
     const idx = themeOrder.indexOf(theme);
@@ -105,6 +108,17 @@ export function AppLayout() {
             </Button>
             <span className="text-xs text-muted-foreground">{themeLabel[theme]}</span>
           </div>
+          {user && (
+            <div className="mt-2 flex items-center justify-between px-3">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium">{user.username}</p>
+                <p className="truncate text-xs text-muted-foreground">{user.email}</p>
+              </div>
+              <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={logout}>
+                <LogOut className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
         </div>
       </aside>
       <main className="flex flex-1 flex-col overflow-y-auto">
