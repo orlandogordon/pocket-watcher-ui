@@ -201,6 +201,7 @@ function ReadyRow({
     isInvestment,
     suggestedMerchant,
     suggestedCategory,
+    descriptionTouched,
   } = useRowEdits(item, categoryMap);
 
   const isThisRowPending = pendingTempId === item.temp_id;
@@ -211,7 +212,17 @@ function ReadyRow({
   const isLowConfidence =
     item.llm_suggestion != null && item.llm_suggestion.confidence < LOW_CONFIDENCE_THRESHOLD;
 
-  const showTierBadge = item.llm_status === 'regex_seed' || item.llm_status === 'raw_fallthrough';
+  // Show tier badge inline whenever there's no other suggestion signal on this
+  // row. Bank rows with `llm` / `cache` carry the signal via the Suggested
+  // pills on merchant + category, so the badge stays quiet there. Investment
+  // rows hide merchant / category entirely, so the badge is the only signal
+  // that cleanup ran. Hide once the user has edited the description — at that
+  // point the displayed value isn't the cleaned value anymore.
+  const showTierBadge =
+    !descriptionTouched &&
+    (isInvestment ||
+      item.llm_status === 'regex_seed' ||
+      item.llm_status === 'raw_fallthrough');
 
   function saveEdits(overrides?: Partial<RowEdits>) {
     onEditSave(item.temp_id, overrides ? { ...edits, ...overrides } : edits);
@@ -284,17 +295,19 @@ function ReadyRow({
                 </Badge>
               )}
             </div>
-            <div className="flex items-center gap-1.5">
-              <Input
-                value={merchantName}
-                onChange={(e) => setMerchantName(e.target.value)}
-                onBlur={() => saveEdits()}
-                className="h-6 text-xs text-muted-foreground"
-                disabled={disabled || isInvestment}
-                placeholder={isInvestment ? '' : 'Merchant (optional)'}
-              />
-              {!isInvestment && suggestedMerchant && <SuggestedPill />}
-            </div>
+            {!isInvestment && (
+              <div className="flex items-center gap-1.5">
+                <Input
+                  value={merchantName}
+                  onChange={(e) => setMerchantName(e.target.value)}
+                  onBlur={() => saveEdits()}
+                  className="h-6 text-xs text-muted-foreground"
+                  disabled={disabled}
+                  placeholder="Merchant (optional)"
+                />
+                {suggestedMerchant && <SuggestedPill />}
+              </div>
+            )}
           </div>
         </TableCell>
         {/* Amount */}
@@ -518,7 +531,7 @@ export function ReadyToImportTable({ items, onReject, onBulkReject, onEditSave, 
                 />
               </TableHead>
               <TableHead className="w-28">Date</TableHead>
-              <TableHead>Description / Merchant</TableHead>
+              <TableHead>{showRegularCols ? 'Description / Merchant' : 'Description'}</TableHead>
               <TableHead className="w-28">Amount</TableHead>
               {showInvestmentCols && (
                 <>

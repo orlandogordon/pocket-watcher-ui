@@ -41,9 +41,14 @@ export function useRowEdits(item: PreviewItem, categoryMap?: Map<string, Categor
   const suggestion = item.llm_suggestion;
 
   // Description: edited > cleaned > raw parser
-  const [description, setDescription] = useState(
+  const [description, setDescriptionState] = useState(
     String(edited.description ?? item.cleaned_description ?? pd.description ?? ''),
   );
+  const [descriptionTouched, setDescriptionTouched] = useState(edited.description !== undefined);
+  function setDescription(val: string) {
+    setDescriptionState(val);
+    setDescriptionTouched(true);
+  }
   const [amount, setAmount] = useState(
     String(edited.amount ?? pd.amount ?? edited.total_amount ?? pd.total_amount ?? ''),
   );
@@ -129,5 +134,6 @@ export function useRowEdits(item: PreviewItem, categoryMap?: Map<string, Categor
     isInvestment,
     suggestedMerchant,
     suggestedCategory,
+    descriptionTouched,
   };
 }
