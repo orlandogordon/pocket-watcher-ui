@@ -43,7 +43,7 @@ function RejectedRow({
   const isThisRowPending = pendingTempId === item.temp_id;
   const disabled = isPending || isThisRowPending;
   const edited = (item.edited_data ?? {}) as Record<string, unknown>;
-  const pd = item.parsed_data as Record<string, string>;
+  const pd = item.parsed_data;
   const displayAmount = String(edited.amount ?? pd.amount ?? edited.total_amount ?? pd.total_amount ?? '0');
 
   return (
@@ -66,9 +66,9 @@ function RejectedRow({
       <TableCell className="text-xs">{formatTypeLabel(String(edited.transaction_type ?? pd.transaction_type))}</TableCell>
       {/* Rejection reason */}
       <TableCell>
-        {item.rejection_reason === 'unmapped_type' ? (
-          <Badge variant="secondary" className="text-xs bg-orange-100 text-orange-700 border-orange-200">
-            Unmapped: {item.unmapped_type_value ?? 'unknown'}
+        {item.duplicate_type === 'unmapped_type' ? (
+          <Badge variant="secondary" className="text-xs bg-orange-100 text-orange-700 border-orange-200" title={item.duplicate_info?.reason}>
+            Unmapped: {String(item.parsed_data.transaction_type ?? 'unknown')}
           </Badge>
         ) : item.duplicate_info?.existing_transaction ? (
           <div>

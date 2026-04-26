@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { PreviewItem } from '@/types/uploads';
+import type { CategoryResponse } from '@/types/categories';
 
 export const TX_TYPES = [
   'PURCHASE', 'DEPOSIT', 'WITHDRAWAL', 'TRANSFER_IN', 'TRANSFER_OUT', 'FEE',
@@ -28,24 +29,62 @@ export interface RowEdits {
 
 export function isInvestmentItem(item: PreviewItem): boolean {
   if (item.transaction_kind === 'investment') return true;
-  const pd = item.parsed_data as Record<string, unknown>;
+  const pd = item.parsed_data;
   return pd.transaction_kind === 'investment' || (pd.total_amount != null && pd.amount == null);
 }
 
-export function useRowEdits(item: PreviewItem) {
+export function useRowEdits(item: PreviewItem, categoryMap?: Map<string, CategoryResponse>) {
   const edited = (item.edited_data ?? {}) as Record<string, unknown>;
-  const pd = item.parsed_data as Record<string, string>;
+  const pd = item.parsed_data;
   const isInvestment = isInvestmentItem(item);
   const txKind = isInvestment ? 'investment' as const : 'regular' as const;
-  const [description, setDescription] = useState(String(edited.description ?? pd.description ?? ''));
+  const suggestion = item.llm_suggestion;
+
+  // Description: edited > cleaned > raw parser
+  const [description, setDescription] = useState(
+    String(edited.description ?? item.cleaned_description ?? pd.description ?? ''),
+  );
   const [amount, setAmount] = useState(
     String(edited.amount ?? pd.amount ?? edited.total_amount ?? pd.total_amount ?? ''),
   );
   const [transactionType, setTransactionType] = useState(String(edited.transaction_type ?? pd.transaction_type ?? ''));
   const [transactionDate, setTransactionDate] = useState(String(edited.transaction_date ?? pd.transaction_date ?? ''));
-  const [merchantName, setMerchantName] = useState(String(edited.merchant_name ?? pd.merchant_name ?? ''));
-  const [categoryUuid, setCategoryUuid] = useState(String(edited.category_uuid ?? pd.category_uuid ?? ''));
-  const [subcategoryUuid, setSubcategoryUuid] = useState(String(edited.subcategory_uuid ?? pd.subcategory_uuid ?? ''));
+
+  // Merchant: edited > suggestion > parser
+  const [merchantName, setMerchantNameState] = useState(
+    String(edited.merchant_name ?? suggestion?.merchant_name ?? pd.merchant_name ?? ''),
+  );
+  const [merchantTouched, setMerchantTouched] = useState(edited.merchant_name !== undefined);
+  function setMerchantName(val: string) {
+    setMerchantNameState(val);
+    setMerchantTouched(true);
+  }
+
+  // Category: edited > suggestion. Parent resolved from subcategory via categoryMap when only sub is known.
+  function resolveParentFromSub(subUuid: string): string {
+    if (!subUuid || !categoryMap) return '';
+    const sub = categoryMap.get(subUuid);
+    return sub?.parent_category_uuid ?? '';
+  }
+  const seedSubUuid = String(edited.subcategory_uuid ?? suggestion?.subcategory_uuid ?? '');
+  const seedCatUuid = edited.category_uuid != null
+    ? String(edited.category_uuid)
+    : (suggestion?.category_uuid ?? resolveParentFromSub(seedSubUuid));
+
+  const [categoryUuid, setCategoryUuidState] = useState(seedCatUuid);
+  const [subcategoryUuid, setSubcategoryUuidState] = useState(seedSubUuid);
+  const [categoryTouched, setCategoryTouched] = useState(
+    edited.category_uuid !== undefined || edited.subcategory_uuid !== undefined,
+  );
+  function setCategoryUuid(val: string) {
+    setCategoryUuidState(val);
+    setCategoryTouched(true);
+  }
+  function setSubcategoryUuid(val: string) {
+    setSubcategoryUuidState(val);
+    setCategoryTouched(true);
+  }
+
   const [tagUuids, setTagUuids] = useState<string[]>(
     Array.isArray(edited.tag_uuids) ? (edited.tag_uuids as string[]) : [],
   );
@@ -60,6 +99,10 @@ export function useRowEdits(item: PreviewItem) {
       prev.includes(uuid) ? prev.filter((t) => t !== uuid) : [...prev, uuid],
     );
   }
+
+  // Pill visibility: suggestion exists for this field AND user has not touched it.
+  const suggestedMerchant = !merchantTouched && !!suggestion?.merchant_name;
+  const suggestedCategory = !categoryTouched && !!suggestion?.subcategory_uuid;
 
   return {
     edits: {
@@ -84,5 +127,7 @@ export function useRowEdits(item: PreviewItem) {
     quantity, setQuantity,
     pricePerShare, setPricePerShare,
     isInvestment,
+    suggestedMerchant,
+    suggestedCategory,
   };
 }

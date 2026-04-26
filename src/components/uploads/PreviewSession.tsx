@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
-import { AlertTriangle, CheckCircle2, Clock } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Clock, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -174,6 +174,16 @@ export function PreviewSession({ sessionId, onCancel, onConfirmed }: PreviewSess
         </div>
       )}
 
+      {/* LLM degraded banner */}
+      {preview.llm_summary?.degraded && (
+        <div className="flex items-center gap-2 rounded-md border border-orange-200 bg-orange-50 px-4 py-2 text-sm text-orange-700">
+          <Sparkles className="h-4 w-4" />
+          <span>
+            AI suggestions unavailable for this import — categorize manually. Description cleaning fell back to raw parser output for some rows.
+          </span>
+        </div>
+      )}
+
       {/* TTL warning banner */}
       {showTtlWarning && (
         <div className="flex items-center justify-between rounded-md border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-700">
@@ -222,6 +232,22 @@ export function PreviewSession({ sessionId, onCancel, onConfirmed }: PreviewSess
           </CardContent>
         </Card>
       </div>
+
+      {/* LLM debug strip */}
+      {preview.llm_summary && (
+        <div className="text-xs text-muted-foreground flex items-center gap-1">
+          <Sparkles className="h-3 w-3" />
+          <span>
+            {preview.llm_summary.source_counts.llm} LLM ·{' '}
+            {preview.llm_summary.source_counts.cache} cache ·{' '}
+            {preview.llm_summary.source_counts.regex_seed} rule ·{' '}
+            {preview.llm_summary.source_counts.raw_fallthrough} raw
+            {preview.llm_summary.suggestions_made > 0 && (
+              <> · {preview.llm_summary.suggestions_made} suggestions</>
+            )}
+          </span>
+        </div>
+      )}
 
       {/* Tabbed sections */}
       <Tabs defaultValue="ready">

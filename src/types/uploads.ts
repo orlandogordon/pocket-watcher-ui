@@ -1,5 +1,3 @@
-import type { TransactionResponse } from './transactions';
-
 export const INSTITUTIONS = ['tdbank', 'amex', 'amzn-synchrony', 'schwab', 'tdameritrade', 'ameriprise'] as const;
 export type Institution = typeof INSTITUTIONS[number];
 
@@ -17,6 +15,7 @@ export interface ParsedData {
   amount: string;
   description: string;
   transaction_type: string;
+  merchant_name?: string | null;
   symbol?: string;
   quantity?: string;
   // Investment-specific fields
@@ -57,8 +56,10 @@ export interface InvestmentTransactionResponse {
   security_type?: string;
 }
 
+export type DuplicateType = 'database' | 'within_statement' | 'both' | 'unmapped_type';
+
 export interface DuplicateInfo {
-  duplicate_type: 'database' | 'within_statement' | 'both';
+  duplicate_type: DuplicateType;
   existing_transaction?: {
     id: string;
     transaction_date: string;
@@ -71,6 +72,16 @@ export interface DuplicateInfo {
     description: string;
   };
   existing_transaction_id?: string;
+  reason?: string;
+}
+
+export type LLMStatus = 'llm' | 'cache' | 'regex_seed' | 'raw_fallthrough';
+
+export interface LLMSuggestion {
+  merchant_name: string;
+  category_uuid: string;
+  subcategory_uuid: string;
+  confidence: number;
 }
 
 export interface PreviewItem {
@@ -78,17 +89,34 @@ export interface PreviewItem {
   parsed_data: ParsedData;
   edited_data: Record<string, unknown>; // cast to EditedData at render
   review_status: 'ready' | 'rejected';
-  rejection_reason?: 'duplicate' | 'unmapped_type';
-  duplicate_type?: 'database' | 'within_statement' | 'both';
+  is_duplicate: boolean;
+  duplicate_type?: DuplicateType;
   duplicate_info?: DuplicateInfo;
   transaction_kind?: 'regular' | 'investment';
-  unmapped_type_value?: string;
+  // LLM layers (backend #27 description cleaning + #29 merchant/category suggestion)
+  cleaned_description: string;
+  llm_status: LLMStatus;
+  llm_model: string | null;
+  llm_processed_at: string | null;
+  llm_suggestion: LLMSuggestion | null;
 }
 
 export interface PreviewSummary {
   total_parsed: number;
   rejected: number;
   ready_to_import: number;
+}
+
+export interface LLMSummary {
+  source_counts: {
+    cache: number;
+    regex_seed: number;
+    llm: number;
+    raw_fallthrough: number;
+  };
+  degraded: boolean;
+  suggestions_made: number;
+  total: number;
 }
 
 export interface PreviewResponse {
@@ -108,6 +136,7 @@ export interface PreviewResponse {
     transactions: PreviewItem[];
     investment_transactions: PreviewItem[];
   } | null;
+  llm_summary?: LLMSummary | null;
 }
 
 export interface BulkActionResponse extends PreviewResponse {
@@ -128,6 +157,9 @@ export interface ConfirmResponse {
   transactions_created: number;
   investment_transactions_created: number;
   upload_job_id: number;
+  suggestion_accepted?: number;
+  suggestion_overridden?: number;
+  processing_time_ms?: number;
 }
 
 export type UploadJobStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';

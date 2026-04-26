@@ -7,7 +7,7 @@ import { UploadForm } from '@/components/uploads/UploadForm';
 import { PreviewSession } from '@/components/uploads/PreviewSession';
 import { usePreviewSessions, useCancelSession } from '@/hooks/useStatementUpload';
 import { INSTITUTION_LABELS } from '@/types/uploads';
-import type { ConfirmResponse, PreviewResponse, Institution, PreviewSessionInfo } from '@/types/uploads';
+import type { ConfirmResponse, PreviewResponse, Institution } from '@/types/uploads';
 
 type Step =
   | { kind: 'form' }
@@ -36,6 +36,14 @@ function SuccessBanner({
             ` + ${result.investment_transactions_created} investment transaction${result.investment_transactions_created !== 1 ? 's' : ''}`}
           .
         </p>
+        {(result.suggestion_accepted ?? 0) + (result.suggestion_overridden ?? 0) > 0 && (
+          <p className="text-sm text-muted-foreground">
+            Accepted {result.suggestion_accepted ?? 0} AI suggestion{(result.suggestion_accepted ?? 0) !== 1 ? 's' : ''}
+            {(result.suggestion_overridden ?? 0) > 0 &&
+              `, overrode ${result.suggestion_overridden}`}
+            .
+          </p>
+        )}
         <p className="text-xs text-muted-foreground">Job ID: {result.upload_job_id}</p>
       </div>
       <div className="flex justify-center gap-3">
