@@ -12,7 +12,6 @@ import {
   LineChart,
   BarChart3,
   Tag,
-  FolderOpen,
   Settings,
   Sun,
   Moon,
@@ -37,7 +36,6 @@ const primaryNav = [
 ];
 
 const utilityNav = [
-  { to: '/categories', label: 'Categories', icon: FolderOpen },
   { to: '/tags', label: 'Tags', icon: Tag },
   { to: '/admin', label: 'Admin', icon: Settings },
 ];

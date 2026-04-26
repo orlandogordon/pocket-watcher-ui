@@ -4,8 +4,3 @@ export interface CategoryResponse {
   parent_category_uuid?: string;
   children?: CategoryResponse[];
 }
-
-export interface CategoryCreate {
-  name: string;
-  parent_category_uuid?: string;
-}
