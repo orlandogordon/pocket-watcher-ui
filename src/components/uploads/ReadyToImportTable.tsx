@@ -25,7 +25,7 @@ import { useCategories, buildCategoryMap } from '@/hooks/useCategories';
 import { useTags } from '@/hooks/useTags';
 import type { CategoryResponse } from '@/types/categories';
 import type { TagResponse } from '@/types/transactions';
-import type { LLMStatus, PreviewItem } from '@/types/uploads';
+import type { MerchantSource, PreviewItem } from '@/types/uploads';
 import { useRowEdits, isInvestmentItem, TX_TYPES, SECURITY_TYPES, type RowEdits } from './upload-utils';
 import { TagsCell } from './TagsCell';
 
@@ -37,25 +37,22 @@ const DUPLICATE_TYPE_LABELS: Record<string, string> = {
 
 const LOW_CONFIDENCE_THRESHOLD = 0.7;
 
-const LLM_STATUS_LABEL: Record<LLMStatus, string> = {
-  llm: 'Cleaned · LLM',
-  cache: 'Cleaned · Cache',
-  regex_seed: 'Cleaned · Rule',
-  raw_fallthrough: 'Original',
-};
-
-function llmStatusBadgeClass(status: LLMStatus): string {
-  switch (status) {
-    case 'regex_seed':
-      return 'bg-sky-100 text-sky-700 border-sky-200';
-    case 'raw_fallthrough':
-      return 'bg-orange-100 text-orange-700 border-orange-200';
-    case 'cache':
-      return 'bg-muted text-muted-foreground';
-    case 'llm':
-    default:
-      return 'bg-violet-100 text-violet-700 border-violet-200';
-  }
+function MerchantSourceBadge({ source }: { source: Exclude<MerchantSource, null> }) {
+  const isRegex = source === 'regex';
+  return (
+    <Badge
+      variant="outline"
+      className={cn(
+        'text-[10px] shrink-0 px-1 py-0',
+        isRegex
+          ? 'bg-sky-50 text-sky-700 border-sky-200'
+          : 'bg-violet-50 text-violet-700 border-violet-200',
+      )}
+      title={isRegex ? 'Merchant extracted deterministically by regex' : 'Merchant suggested by LLM — review carefully'}
+    >
+      {isRegex ? 'Regex' : 'LLM'}
+    </Badge>
+  );
 }
 
 interface ReadyToImportTableProps {
@@ -133,12 +130,6 @@ function DetailRow({
                 </div>
               </>
             )}
-            <div className="flex items-center gap-1.5">
-              <span className="text-muted-foreground">Cleaning: </span>
-              <Badge variant="secondary" className={cn('text-[10px] px-1.5 py-0', llmStatusBadgeClass(item.llm_status))}>
-                {LLM_STATUS_LABEL[item.llm_status]}
-              </Badge>
-            </div>
             {item.llm_model && (
               <div className="truncate">
                 <span className="text-muted-foreground">Model: </span>
@@ -201,7 +192,6 @@ function ReadyRow({
     isInvestment,
     suggestedMerchant,
     suggestedCategory,
-    descriptionTouched,
   } = useRowEdits(item, categoryMap);
 
   const isThisRowPending = pendingTempId === item.temp_id;
@@ -209,20 +199,18 @@ function ReadyRow({
 
   const subcategories = categories.filter((c) => c.parent_category_uuid === categoryUuid);
 
+  // Mirror the backend's confirm-time auto-tag (uploads.py:962): rows with a
+  // null/empty merchant or no category will pick up the "Needs Review" system
+  // tag. Show a heads-up so the user isn't surprised post-import. Investment
+  // rows are exempt (no category/merchant on that path).
+  const willNeedReview =
+    !isInvestment && (!categoryUuid || !merchantName.trim());
+
+  // Belt-and-suspenders for the rare case where the backend left a
+  // non-null suggestion through with low confidence (shouldn't happen
+  // post-#34 since low-conf categories null out, but cheap insurance).
   const isLowConfidence =
     item.llm_suggestion != null && item.llm_suggestion.confidence < LOW_CONFIDENCE_THRESHOLD;
-
-  // Show tier badge inline whenever there's no other suggestion signal on this
-  // row. Bank rows with `llm` / `cache` carry the signal via the Suggested
-  // pills on merchant + category, so the badge stays quiet there. Investment
-  // rows hide merchant / category entirely, so the badge is the only signal
-  // that cleanup ran. Hide once the user has edited the description — at that
-  // point the displayed value isn't the cleaned value anymore.
-  const showTierBadge =
-    !descriptionTouched &&
-    (isInvestment ||
-      item.llm_status === 'regex_seed' ||
-      item.llm_status === 'raw_fallthrough');
 
   function saveEdits(overrides?: Partial<RowEdits>) {
     onEditSave(item.temp_id, overrides ? { ...edits, ...overrides } : edits);
@@ -235,7 +223,7 @@ function ReadyRow({
 
   return (
     <>
-      <TableRow className={cn(isLowConfidence && 'border-l-4 border-l-amber-400')}>
+      <TableRow className={cn((willNeedReview || isLowConfidence) && 'border-l-4 border-l-amber-400')}>
         <TableCell>
           <div className="flex items-center gap-1">
             <button
@@ -260,7 +248,7 @@ function ReadyRow({
             placeholder="YYYY-MM-DD"
           />
         </TableCell>
-        {/* Description + tier badge + Merchant + duplicate / suggested pills */}
+        {/* Description + Merchant + duplicate / suggested / source pills */}
         <TableCell>
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-1.5">
@@ -272,15 +260,6 @@ function ReadyRow({
                 disabled={disabled}
                 placeholder="Description"
               />
-              {showTierBadge && (
-                <Badge
-                  variant="secondary"
-                  className={cn('text-[10px] shrink-0 px-1 py-0', llmStatusBadgeClass(item.llm_status))}
-                  title={`Original: ${item.parsed_data.description}`}
-                >
-                  {LLM_STATUS_LABEL[item.llm_status]}
-                </Badge>
-              )}
               {item.duplicate_type && item.duplicate_type !== 'unmapped_type' && (
                 <Badge
                   variant="secondary"
@@ -303,9 +282,20 @@ function ReadyRow({
                   onBlur={() => saveEdits()}
                   className="h-6 text-xs text-muted-foreground"
                   disabled={disabled}
-                  placeholder="Merchant (optional)"
+                  placeholder="Merchant (none detected)"
                 />
+                {item.merchant_source && merchantName.trim() && (
+                  <MerchantSourceBadge source={item.merchant_source} />
+                )}
                 {suggestedMerchant && <SuggestedPill />}
+              </div>
+            )}
+            {willNeedReview && (
+              <div
+                className="text-[10px] text-amber-700"
+                title="Backend will auto-apply the Needs Review system tag at confirm time when category or merchant is blank."
+              >
+                Will be tagged Needs Review on import
               </div>
             )}
           </div>

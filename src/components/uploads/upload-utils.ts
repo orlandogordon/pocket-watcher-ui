@@ -40,9 +40,10 @@ export function useRowEdits(item: PreviewItem, categoryMap?: Map<string, Categor
   const txKind = isInvestment ? 'investment' as const : 'regular' as const;
   const suggestion = item.llm_suggestion;
 
-  // Description: edited > cleaned > raw parser
+  // Description: edited > raw parser. The cleaned_description tier was
+  // removed when backend #35 dropped LLM description cleanup.
   const [description, setDescriptionState] = useState(
-    String(edited.description ?? item.cleaned_description ?? pd.description ?? ''),
+    String(edited.description ?? pd.description ?? ''),
   );
   const [descriptionTouched, setDescriptionTouched] = useState(edited.description !== undefined);
   function setDescription(val: string) {

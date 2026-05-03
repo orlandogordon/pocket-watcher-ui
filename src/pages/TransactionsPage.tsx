@@ -4,7 +4,7 @@ import { Plus, Pencil, Trash2, X, Tag, Scissors, CalendarRange, Link2, MoreHoriz
 import { useTransactions, useTransactionStats } from '@/hooks/useTransactions';
 import { useAccounts } from '@/hooks/useAccounts';
 import { useCategories } from '@/hooks/useCategories';
-import { useTags } from '@/hooks/useTags';
+import { useTags, useRemoveTagFromTransaction } from '@/hooks/useTags';
 import { formatCurrency, formatTypeLabel } from '@/lib/format';
 import { TransactionFormDialog } from '@/components/transactions/TransactionFormDialog';
 import { DeleteTransactionDialog } from '@/components/transactions/DeleteTransactionDialog';
@@ -94,6 +94,7 @@ export function TransactionsPage() {
   const { data: accounts } = useAccounts();
   const { data: categories } = useCategories();
   const { data: tags } = useTags();
+  const removeTagMutation = useRemoveTagFromTransaction();
 
   const accountMap = new Map((accounts ?? []).map((a) => [a.uuid, a.account_name]));
   const allCategories = categories ?? [];
@@ -410,13 +411,23 @@ export function TransactionsPage() {
                         {(tx.tags ?? []).map((tag) => (
                           <span
                             key={tag.id}
-                            className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium"
+                            className="inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-xs font-medium"
                             style={{
                               backgroundColor: tag.color,
                               color: '#fff',
                             }}
                           >
                             {tag.tag_name}
+                            <button
+                              type="button"
+                              onClick={() => removeTagMutation.mutate({ transaction_uuid: tx.id, tag_uuid: tag.id })}
+                              disabled={removeTagMutation.isPending}
+                              className="ml-0.5 rounded-full hover:bg-white/20 cursor-pointer disabled:opacity-50"
+                              aria-label={`Remove ${tag.tag_name}`}
+                              title={tag.is_system ? `Remove ${tag.tag_name} from this transaction` : 'Remove tag'}
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
                           </span>
                         ))}
                       </div>

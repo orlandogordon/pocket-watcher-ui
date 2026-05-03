@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, Lock } from 'lucide-react';
+import { X } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -82,19 +82,16 @@ export function ManageTagsDialog({
                     style={{ backgroundColor: tag.color }}
                   >
                     {tag.tag_name}
-                    {tag.is_system ? (
-                      <Lock className="ml-0.5 h-3 w-3 opacity-60" title="System tag — cannot remove" />
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => handleRemove(tag.id)}
-                        disabled={removeTag.isPending}
-                        className="ml-0.5 rounded-full hover:opacity-75 cursor-pointer disabled:opacity-50"
-                        aria-label={`Remove ${tag.tag_name}`}
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    )}
+                    <button
+                      type="button"
+                      onClick={() => handleRemove(tag.id)}
+                      disabled={removeTag.isPending}
+                      className="ml-0.5 rounded-full hover:opacity-75 cursor-pointer disabled:opacity-50"
+                      aria-label={`Remove ${tag.tag_name}`}
+                      title={tag.is_system ? `Remove ${tag.tag_name} from this transaction (the tag itself is preserved)` : undefined}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
                   </span>
                 ))}
               </div>

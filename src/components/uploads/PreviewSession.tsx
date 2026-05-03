@@ -179,7 +179,7 @@ export function PreviewSession({ sessionId, onCancel, onConfirmed }: PreviewSess
         <div className="flex items-center gap-2 rounded-md border border-orange-200 bg-orange-50 px-4 py-2 text-sm text-orange-700">
           <Sparkles className="h-4 w-4" />
           <span>
-            AI suggestions unavailable for this import — categorize manually. Description cleaning fell back to raw parser output for some rows.
+            AI suggestions unavailable for this import — merchants and categories may need manual review.
           </span>
         </div>
       )}
@@ -234,20 +234,42 @@ export function PreviewSession({ sessionId, onCancel, onConfirmed }: PreviewSess
       </div>
 
       {/* LLM debug strip */}
-      {preview.llm_summary && (
-        <div className="text-xs text-muted-foreground flex items-center gap-1">
-          <Sparkles className="h-3 w-3" />
-          <span>
-            {preview.llm_summary.source_counts.llm} LLM ·{' '}
-            {preview.llm_summary.source_counts.cache} cache ·{' '}
-            {preview.llm_summary.source_counts.regex_seed} rule ·{' '}
-            {preview.llm_summary.source_counts.raw_fallthrough} raw
-            {preview.llm_summary.suggestions_made > 0 && (
-              <> · {preview.llm_summary.suggestions_made} suggestions</>
+      {preview.llm_summary && (() => {
+        // Backend's merchant_source_counts spans regular + investment rows.
+        // Investment rows hide merchant in the table, so re-tally over bank
+        // rows only — keeps the displayed numbers consistent with what the
+        // user sees per-row.
+        const bankItems = [
+          ...(preview.ready_to_import?.transactions ?? []),
+          ...(preview.rejected?.transactions ?? []),
+        ];
+        const merchantCounts = bankItems.reduce(
+          (acc, item) => {
+            const key = item.merchant_source ?? 'null';
+            acc[key] = (acc[key] ?? 0) + 1;
+            return acc;
+          },
+          { regex: 0, llm: 0, null: 0 } as Record<'regex' | 'llm' | 'null', number>,
+        );
+        return (
+          <div className="text-xs text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1">
+            <span className="flex items-center gap-1">
+              <Sparkles className="h-3 w-3" />
+              {preview.llm_summary!.source_counts.llm} LLM ·{' '}
+              {preview.llm_summary!.source_counts.empty} empty ·{' '}
+              {preview.llm_summary!.source_counts.raw_fallthrough} raw
+              {preview.llm_summary!.suggestions_made > 0 && (
+                <> · {preview.llm_summary!.suggestions_made} suggestions</>
+              )}
+            </span>
+            {bankItems.length > 0 && (
+              <span title="Where each bank row's merchant came from">
+                Merchants: {merchantCounts.regex} regex · {merchantCounts.llm} LLM · {merchantCounts.null} blank
+              </span>
             )}
-          </span>
-        </div>
-      )}
+          </div>
+        );
+      })()}
 
       {/* Tabbed sections */}
       <Tabs defaultValue="ready">

@@ -75,12 +75,14 @@ export interface DuplicateInfo {
   reason?: string;
 }
 
-export type LLMStatus = 'llm' | 'cache' | 'regex_seed' | 'raw_fallthrough';
+export type LLMStatus = 'empty' | 'llm' | 'raw_fallthrough';
+
+export type MerchantSource = 'regex' | 'llm' | null;
 
 export interface LLMSuggestion {
-  merchant_name: string;
-  category_uuid: string;
-  subcategory_uuid: string;
+  merchant_name: string | null;
+  category_uuid: string | null;
+  subcategory_uuid: string | null;
   confidence: number;
 }
 
@@ -93,12 +95,11 @@ export interface PreviewItem {
   duplicate_type?: DuplicateType;
   duplicate_info?: DuplicateInfo;
   transaction_kind?: 'regular' | 'investment';
-  // LLM layers (backend #27 description cleaning + #29 merchant/category suggestion)
-  cleaned_description: string;
   llm_status: LLMStatus;
   llm_model: string | null;
   llm_processed_at: string | null;
   llm_suggestion: LLMSuggestion | null;
+  merchant_source: MerchantSource;
 }
 
 export interface PreviewSummary {
@@ -109,10 +110,14 @@ export interface PreviewSummary {
 
 export interface LLMSummary {
   source_counts: {
-    cache: number;
-    regex_seed: number;
+    empty: number;
     llm: number;
     raw_fallthrough: number;
+  };
+  merchant_source_counts: {
+    regex: number;
+    llm: number;
+    null: number;
   };
   degraded: boolean;
   suggestions_made: number;
