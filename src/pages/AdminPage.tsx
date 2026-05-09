@@ -131,7 +131,7 @@ function RecalculateRow({ account }: { account: AccountResponse }) {
   );
 }
 
-function SnapshotActionsSection({ investmentAccounts }: { investmentAccounts: AccountResponse[] }) {
+function SnapshotActionsSection({ accounts }: { accounts: AccountResponse[] }) {
   return (
     <Card>
       <CardHeader>
@@ -139,10 +139,10 @@ function SnapshotActionsSection({ investmentAccounts }: { investmentAccounts: Ac
       </CardHeader>
       <CardContent className="space-y-4">
         <SnapshotAllButton />
-        {investmentAccounts.length > 0 && (
+        {accounts.length > 0 && (
           <div className="space-y-3 pt-2">
             <h4 className="text-sm font-medium text-muted-foreground">Recalculate per Account</h4>
-            {investmentAccounts.map((acc) => (
+            {accounts.map((acc) => (
               <RecalculateRow key={acc.uuid} account={acc} />
             ))}
           </div>
@@ -217,7 +217,7 @@ function JobsTable({ accountUuid }: { accountUuid: string }) {
   );
 }
 
-function RecentJobsSection({ investmentAccounts }: { investmentAccounts: AccountResponse[] }) {
+function RecentJobsSection({ accounts }: { accounts: AccountResponse[] }) {
   const [selectedAccount, setSelectedAccount] = useState('');
 
   return (
@@ -228,10 +228,10 @@ function RecentJobsSection({ investmentAccounts }: { investmentAccounts: Account
       <CardContent className="space-y-4">
         <Select value={selectedAccount} onValueChange={setSelectedAccount}>
           <SelectTrigger className="w-72">
-            <SelectValue placeholder="Select an investment account" />
+            <SelectValue placeholder="Select an account" />
           </SelectTrigger>
           <SelectContent>
-            {investmentAccounts.map((acc) => (
+            {accounts.map((acc) => (
               <SelectItem key={acc.uuid} value={acc.uuid}>
                 {acc.account_name}
               </SelectItem>
@@ -588,16 +588,17 @@ function NeedsReviewSection({ investmentAccounts }: { investmentAccounts: Accoun
 export function AdminPage() {
   const { data: accounts } = useAccounts();
 
+  const allAccounts = useMemo(() => accounts ?? [], [accounts]);
   const investmentAccounts = useMemo(
-    () => (accounts ?? []).filter((a) => a.account_type === 'INVESTMENT'),
-    [accounts]
+    () => allAccounts.filter((a) => a.account_type === 'INVESTMENT'),
+    [allAccounts]
   );
 
   return (
     <div className="p-6 space-y-6 max-w-5xl">
       <h1 className="text-2xl font-bold tracking-tight">Admin</h1>
-      <SnapshotActionsSection investmentAccounts={investmentAccounts} />
-      <RecentJobsSection investmentAccounts={investmentAccounts} />
+      <SnapshotActionsSection accounts={allAccounts} />
+      <RecentJobsSection accounts={allAccounts} />
       <NeedsReviewSection investmentAccounts={investmentAccounts} />
     </div>
   );
