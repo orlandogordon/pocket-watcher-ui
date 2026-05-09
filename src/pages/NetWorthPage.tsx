@@ -9,6 +9,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
+import type { TooltipProps } from 'recharts';
 
 import { useAccounts, useAccountStats } from '@/hooks/useAccounts';
 import { useNetWorthHistory } from '@/hooks/useNetWorthHistory';
@@ -23,6 +24,37 @@ const RANGE_OPTIONS = [
   { label: '1y', days: 365 },
   { label: 'All', days: 3650 },
 ] as const;
+
+function NetWorthTooltip({ active, payload }: TooltipProps<number, string>) {
+  if (!active || !payload?.length) return null;
+  const d = payload[0].payload as {
+    rawDate: string;
+    netWorth: number;
+    prevNetWorth: number | null;
+  };
+  const delta = d.prevNetWorth != null ? d.netWorth - d.prevNetWorth : null;
+  const pct =
+    d.prevNetWorth != null && d.prevNetWorth !== 0
+      ? (delta! / Math.abs(d.prevNetWorth)) * 100
+      : null;
+
+  return (
+    <div className="rounded-md border bg-background px-3 py-2 text-sm shadow-md">
+      <div className="font-semibold mb-1">{format(parseISO(d.rawDate), 'MMM d, yyyy')}</div>
+      <div className="flex justify-between gap-4">
+        <span className="text-muted-foreground">Net Worth</span>
+        <span className="font-medium">{formatCurrency(d.netWorth)}</span>
+      </div>
+      {delta != null && (
+        <div className={`text-xs mt-1 ${delta >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+          {delta >= 0 ? '↑' : '↓'} {delta >= 0 ? '+' : ''}
+          {formatCurrency(delta)}
+          {pct != null && ` (${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%)`}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function StatCard({
   title,
@@ -54,14 +86,16 @@ export function NetWorthPage() {
   const netWorth = parseFloat(stats?.net_worth ?? '0');
   const dateFormat = days <= 90 ? 'MMM d' : "MMM ''yy";
 
-  const chartData = (netWorthHistory?.data ?? []).map((pt) => ({
+  const rawPoints = netWorthHistory?.data ?? [];
+  const chartData = rawPoints.map((pt, i) => ({
     date: format(parseISO(pt.date), dateFormat),
+    rawDate: pt.date,
     netWorth: pt.net_worth,
+    prevNetWorth: i > 0 ? rawPoints[i - 1].net_worth : null,
   }));
 
-  const rawHistory = netWorthHistory?.data ?? [];
-  const firstVal = rawHistory.length > 0 ? rawHistory[0].net_worth : 0;
-  const lastVal = rawHistory.length > 0 ? rawHistory[rawHistory.length - 1].net_worth : 0;
+  const firstVal = rawPoints.length > 0 ? rawPoints[0].net_worth : 0;
+  const lastVal = rawPoints.length > 0 ? rawPoints[rawPoints.length - 1].net_worth : 0;
   const trendUp = lastVal >= firstVal;
   const chartColor = trendUp ? '#16a34a' : '#dc2626';
 
@@ -139,13 +173,7 @@ export function NetWorthPage() {
                   axisLine={false}
                   width={52}
                 />
-                <Tooltip
-                  formatter={(value: number | string | undefined) => [
-                    formatCurrency(String(value ?? 0)),
-                    'Net Worth',
-                  ]}
-                  labelStyle={{ fontWeight: 600 }}
-                />
+                <Tooltip content={<NetWorthTooltip />} />
                 <Area
                   type="monotone"
                   dataKey="netWorth"

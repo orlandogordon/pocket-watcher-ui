@@ -8,6 +8,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
+import type { TooltipProps } from 'recharts';
 import { AlertTriangle } from 'lucide-react';
 
 import { useAccountHistory } from '@/hooks/useAccountHistory';
@@ -21,6 +22,63 @@ interface AccountHistoryCardProps {
   dateFormat: string;
 }
 
+function AccountTooltip({
+  active,
+  payload,
+  hasBreakdown,
+  isLiability,
+}: TooltipProps<number, string> & { hasBreakdown: boolean; isLiability: boolean }) {
+  if (!active || !payload?.length) return null;
+  const d = payload[0].payload as {
+    rawDate: string;
+    balance: number;
+    prevBalance: number | null;
+    securities?: number;
+    cash?: number;
+  };
+  const delta = d.prevBalance != null ? d.balance - d.prevBalance : null;
+  const pct =
+    d.prevBalance != null && d.prevBalance !== 0
+      ? (delta! / Math.abs(d.prevBalance)) * 100
+      : null;
+  // For liabilities, a balance increase is bad for the user — flip color.
+  const isFavorable = delta != null && (isLiability ? delta < 0 : delta >= 0);
+
+  return (
+    <div className="rounded-md border bg-background px-3 py-2 text-sm shadow-md">
+      <div className="font-semibold mb-1">{format(parseISO(d.rawDate), 'MMM d, yyyy')}</div>
+      {hasBreakdown ? (
+        <>
+          <div className="flex justify-between gap-4">
+            <span className="text-muted-foreground">Securities</span>
+            <span>{formatCurrency(d.securities ?? 0)}</span>
+          </div>
+          <div className="flex justify-between gap-4">
+            <span className="text-muted-foreground">Cash</span>
+            <span>{formatCurrency(d.cash ?? 0)}</span>
+          </div>
+          <div className="flex justify-between gap-4 border-t pt-1 mt-1">
+            <span className="text-muted-foreground">Balance</span>
+            <span className="font-medium">{formatCurrency(d.balance)}</span>
+          </div>
+        </>
+      ) : (
+        <div className="flex justify-between gap-4">
+          <span className="text-muted-foreground">Balance</span>
+          <span className="font-medium">{formatCurrency(d.balance)}</span>
+        </div>
+      )}
+      {delta != null && (
+        <div className={`text-xs mt-1 ${isFavorable ? 'text-green-600' : 'text-red-600'}`}>
+          {delta >= 0 ? '↑' : '↓'} {delta >= 0 ? '+' : ''}
+          {formatCurrency(delta)}
+          {pct != null && ` (${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%)`}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function AccountHistoryCard({ account, days, dateFormat }: AccountHistoryCardProps) {
   const { data: history, isLoading } = useAccountHistory(account.uuid, days);
   const isInvestment = account.account_type === 'INVESTMENT';
@@ -30,9 +88,11 @@ export function AccountHistoryCard({ account, days, dateFormat }: AccountHistory
 
   const hasBreakdown = isInvestment && dataPoints.some((pt) => pt.securities_value != null);
 
-  const chartData = dataPoints.map((pt) => ({
+  const chartData = dataPoints.map((pt, i) => ({
     date: format(parseISO(pt.value_date), dateFormat),
+    rawDate: pt.value_date,
     balance: parseFloat(pt.balance),
+    prevBalance: i > 0 ? parseFloat(dataPoints[i - 1].balance) : null,
     ...(hasBreakdown && {
       securities: parseFloat(pt.securities_value ?? '0'),
       cash: parseFloat(pt.cash_balance ?? '0'),
@@ -93,11 +153,9 @@ export function AccountHistoryCard({ account, days, dateFormat }: AccountHistory
                   width={48}
                 />
                 <Tooltip
-                  formatter={(value: number | string | undefined, name: string) => [
-                    formatCurrency(String(value ?? 0)),
-                    name === 'securities' ? 'Securities' : name === 'cash' ? 'Cash' : 'Balance',
-                  ]}
-                  labelStyle={{ fontWeight: 600 }}
+                  content={
+                    <AccountTooltip hasBreakdown={hasBreakdown} isLiability={isLiability} />
+                  }
                 />
                 {hasBreakdown ? (
                   <>
