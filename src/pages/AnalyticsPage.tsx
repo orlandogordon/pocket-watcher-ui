@@ -53,14 +53,17 @@ function StatCard({
 function CategoryRow({
   category,
   totalExpenses,
+  yearMonthlyAvgs,
 }: {
   category: MonthlyAverageCategoryBreakdown;
   totalExpenses: number;
+  yearMonthlyAvgs: Map<string, string>;
 }) {
   const [expanded, setExpanded] = useState(false);
   const total = parseFloat(category.total);
   const pct = totalExpenses > 0 ? ((total / totalExpenses) * 100).toFixed(1) : '0.0';
   const hasSubs = category.subcategories.length > 0;
+  const monthlyAvg = yearMonthlyAvgs.get(category.category_uuid) ?? category.monthly_average;
 
   return (
     <>
@@ -80,23 +83,26 @@ function CategoryRow({
           </span>
         </td>
         <td className="py-2.5 text-right tabular-nums">{formatCurrency(category.total)}</td>
-        <td className="py-2.5 text-right tabular-nums">{formatCurrency(category.monthly_average)}</td>
+        <td className="py-2.5 text-right tabular-nums">{formatCurrency(monthlyAvg)}</td>
         <td className="py-2.5 text-right tabular-nums">{pct}%</td>
       </tr>
       {expanded &&
-        category.subcategories.map((sub) => (
-          <tr key={sub.subcategory_uuid} className="border-b last:border-0 text-muted-foreground">
-            <td className="py-2 pr-2 pl-9 text-sm">{sub.subcategory_name}</td>
-            <td className="py-2 text-right tabular-nums text-sm">{formatCurrency(sub.total)}</td>
-            <td className="py-2 text-right tabular-nums text-sm">{formatCurrency(sub.monthly_average)}</td>
-            <td className="py-2 text-right tabular-nums text-sm">
-              {totalExpenses > 0
-                ? ((parseFloat(sub.total) / totalExpenses) * 100).toFixed(1)
-                : '0.0'}
-              %
-            </td>
-          </tr>
-        ))}
+        category.subcategories.map((sub) => {
+          const subAvg = yearMonthlyAvgs.get(sub.subcategory_uuid) ?? sub.monthly_average;
+          return (
+            <tr key={sub.subcategory_uuid} className="border-b last:border-0 text-muted-foreground">
+              <td className="py-2 pr-2 pl-9 text-sm">{sub.subcategory_name}</td>
+              <td className="py-2 text-right tabular-nums text-sm">{formatCurrency(sub.total)}</td>
+              <td className="py-2 text-right tabular-nums text-sm">{formatCurrency(subAvg)}</td>
+              <td className="py-2 text-right tabular-nums text-sm">
+                {totalExpenses > 0
+                  ? ((parseFloat(sub.total) / totalExpenses) * 100).toFixed(1)
+                  : '0.0'}
+                %
+              </td>
+            </tr>
+          );
+        })}
     </>
   );
 }
@@ -145,6 +151,21 @@ export function AnalyticsPage() {
 
   const activeCategoryData = categoryData ?? data;
   const totalExpenses = parseFloat(activeCategoryData?.totals.total_expenses ?? '0');
+
+  // Year-wide monthly averages keyed by category/subcategory uuid. Used to keep
+  // the "Monthly Avg" column showing the full-year average even when a single
+  // month is selected (the month-scoped response would otherwise compute the
+  // average over one month, making it equal to Total).
+  const yearMonthlyAvgs = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const cat of data?.by_category ?? []) {
+      m.set(cat.category_uuid, cat.monthly_average);
+      for (const sub of cat.subcategories) {
+        m.set(sub.subcategory_uuid, sub.monthly_average);
+      }
+    }
+    return m;
+  }, [data]);
 
   const avgNet = parseFloat(data?.totals.avg_monthly_net ?? '0');
 
@@ -325,6 +346,7 @@ export function AnalyticsPage() {
                         key={cat.category_uuid}
                         category={cat}
                         totalExpenses={totalExpenses}
+                        yearMonthlyAvgs={yearMonthlyAvgs}
                       />
                     ))}
                   </tbody>
