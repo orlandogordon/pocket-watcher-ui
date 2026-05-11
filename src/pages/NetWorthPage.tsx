@@ -31,12 +31,15 @@ function NetWorthTooltip({ active, payload }: TooltipProps<number, string>) {
     rawDate: string;
     netWorth: number;
     prevNetWorth: number | null;
+    accountsTotal: number;
+    accountsFresh: number;
   };
   const delta = d.prevNetWorth != null ? d.netWorth - d.prevNetWorth : null;
   const pct =
     d.prevNetWorth != null && d.prevNetWorth !== 0
       ? (delta! / Math.abs(d.prevNetWorth)) * 100
       : null;
+  const staleCount = d.accountsTotal - d.accountsFresh;
 
   return (
     <div className="rounded-md border bg-background px-3 py-2 text-sm shadow-md">
@@ -50,6 +53,11 @@ function NetWorthTooltip({ active, payload }: TooltipProps<number, string>) {
           {delta >= 0 ? '↑' : '↓'} {delta >= 0 ? '+' : ''}
           {formatCurrency(delta)}
           {pct != null && ` (${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%)`}
+        </div>
+      )}
+      {staleCount > 0 && (
+        <div className="text-xs mt-1 text-muted-foreground">
+          {staleCount} of {d.accountsTotal} accounts stale on this date
         </div>
       )}
     </div>
@@ -80,24 +88,32 @@ function StatCard({
 export function NetWorthPage() {
   const [days, setDays] = useState(90);
   const { data: stats } = useAccountStats();
-  const { data: netWorthHistory } = useNetWorthHistory(days);
+  const { data: netWorthHistory, isLoading: isHistoryLoading } = useNetWorthHistory(days);
   const { data: accounts } = useAccounts();
 
   const netWorth = parseFloat(stats?.net_worth ?? '0');
   const dateFormat = days <= 90 ? 'MMM d' : "MMM ''yy";
 
-  const rawPoints = netWorthHistory?.data ?? [];
+  const allPoints = netWorthHistory?.data ?? [];
+  const firstNonZeroIdx = allPoints.findIndex((pt) => pt.accounts_total > 0);
+  const rawPoints = firstNonZeroIdx >= 0 ? allPoints.slice(firstNonZeroIdx) : [];
   const chartData = rawPoints.map((pt, i) => ({
-    date: format(parseISO(pt.date), dateFormat),
+    ts: parseISO(pt.date).getTime(),
     rawDate: pt.date,
     netWorth: pt.net_worth,
     prevNetWorth: i > 0 ? rawPoints[i - 1].net_worth : null,
+    accountsTotal: pt.accounts_total,
+    accountsFresh: pt.accounts_fresh,
   }));
 
   const firstVal = rawPoints.length > 0 ? rawPoints[0].net_worth : 0;
   const lastVal = rawPoints.length > 0 ? rawPoints[rawPoints.length - 1].net_worth : 0;
   const trendUp = lastVal >= firstVal;
   const chartColor = trendUp ? '#16a34a' : '#dc2626';
+
+  const latestPoint = rawPoints.length > 0 ? rawPoints[rawPoints.length - 1] : null;
+  const showStalenessCaption =
+    latestPoint != null && latestPoint.accounts_fresh < latestPoint.accounts_total;
 
   const yFormatter = (v: number) =>
     v >= 1000 || v <= -1000 ? `$${(v / 1000).toFixed(0)}k` : `$${v}`;
@@ -146,13 +162,16 @@ export function NetWorthPage() {
           <CardTitle>Net Worth Over Time</CardTitle>
         </CardHeader>
         <CardContent>
-          {chartData.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-8 text-center">
-              No history data yet. Run a snapshot to populate the chart.
-            </p>
-          ) : (
-            <ResponsiveContainer width="100%" height={350}>
-              <AreaChart data={chartData} margin={{ top: 4, right: 8, left: 8, bottom: 0 }}>
+          <div style={{ height: 350 }} className="flex items-center justify-center">
+            {isHistoryLoading ? (
+              <p className="text-sm text-muted-foreground">Loading...</p>
+            ) : chartData.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No history data yet. Run a snapshot to populate the chart.
+              </p>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={chartData} margin={{ top: 4, right: 8, left: 8, bottom: 0 }}>
                 <defs>
                   <linearGradient id="nwNetWorthGrad" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor={chartColor} stopOpacity={0.2} />
@@ -161,7 +180,11 @@ export function NetWorthPage() {
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
                 <XAxis
-                  dataKey="date"
+                  dataKey="ts"
+                  type="number"
+                  scale="time"
+                  domain={['dataMin', 'dataMax']}
+                  tickFormatter={(ts: number) => format(new Date(ts), dateFormat)}
                   tick={{ fontSize: 11 }}
                   tickLine={false}
                   axisLine={false}
@@ -173,7 +196,7 @@ export function NetWorthPage() {
                   axisLine={false}
                   width={52}
                 />
-                <Tooltip content={<NetWorthTooltip />} />
+                <Tooltip content={<NetWorthTooltip />} animationDuration={0} />
                 <Area
                   type="monotone"
                   dataKey="netWorth"
@@ -183,9 +206,20 @@ export function NetWorthPage() {
                   baseValue="dataMin"
                   dot={false}
                   activeDot={{ r: 4 }}
+                  isAnimationActive={false}
                 />
-              </AreaChart>
-            </ResponsiveContainer>
+                </AreaChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+          {showStalenessCaption && latestPoint && (
+            <p className="text-xs text-muted-foreground mt-2">
+              As of {format(parseISO(latestPoint.date), 'MMM d, yyyy')}:{' '}
+              {latestPoint.accounts_total - latestPoint.accounts_fresh} of{' '}
+              {latestPoint.accounts_total} accounts using carried-forward balances
+              {latestPoint.oldest_snapshot_date &&
+                ` (oldest snapshot: ${format(parseISO(latestPoint.oldest_snapshot_date), 'MMM d, yyyy')})`}
+            </p>
           )}
         </CardContent>
       </Card>

@@ -3,16 +3,15 @@ import { format, subDays } from 'date-fns';
 import { apiFetch } from '@/lib/api';
 
 export interface AccountValueDataPoint {
-  account_uuid: string;
-  value_date: string;
+  date: string;
   balance: string;
+  securities_value: string | null;
+  cash_balance: string | null;
   total_cost_basis: string | null;
   unrealized_gain_loss: string | null;
-  securities_value?: string;
-  cash_balance?: string;
-  needs_review?: boolean;
-  snapshot_source: string;
-  created_at: string;
+  realized_gain_loss: string | null;
+  is_carried_forward: boolean;
+  source_snapshot_uuid: string | null;
 }
 
 interface AccountValueHistoryResponse {

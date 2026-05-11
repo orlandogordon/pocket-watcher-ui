@@ -9,7 +9,6 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import type { TooltipProps } from 'recharts';
-import { AlertTriangle } from 'lucide-react';
 
 import { useAccountHistory } from '@/hooks/useAccountHistory';
 import { formatCurrency } from '@/lib/format';
@@ -33,6 +32,7 @@ function AccountTooltip({
     rawDate: string;
     balance: number;
     prevBalance: number | null;
+    isCarriedForward: boolean;
     securities?: number;
     cash?: number;
   };
@@ -75,6 +75,9 @@ function AccountTooltip({
           {pct != null && ` (${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%)`}
         </div>
       )}
+      {d.isCarriedForward && (
+        <div className="text-xs mt-1 text-muted-foreground">Carried-forward balance</div>
+      )}
     </div>
   );
 }
@@ -84,20 +87,24 @@ export function AccountHistoryCard({ account, days, dateFormat }: AccountHistory
   const isInvestment = account.account_type === 'INVESTMENT';
 
   const dataPoints = history?.data ?? [];
-  const hasReviewNeeded = dataPoints.some((pt) => pt.needs_review);
 
   const hasBreakdown = isInvestment && dataPoints.some((pt) => pt.securities_value != null);
 
   const chartData = dataPoints.map((pt, i) => ({
-    date: format(parseISO(pt.value_date), dateFormat),
-    rawDate: pt.value_date,
+    ts: parseISO(pt.date).getTime(),
+    rawDate: pt.date,
     balance: parseFloat(pt.balance),
     prevBalance: i > 0 ? parseFloat(dataPoints[i - 1].balance) : null,
+    isCarriedForward: pt.is_carried_forward,
     ...(hasBreakdown && {
       securities: parseFloat(pt.securities_value ?? '0'),
       cash: parseFloat(pt.cash_balance ?? '0'),
     }),
   }));
+
+  const lastFreshPoint = [...dataPoints].reverse().find((pt) => !pt.is_carried_forward);
+  const latestPoint = dataPoints.length > 0 ? dataPoints[dataPoints.length - 1] : null;
+  const showStalenessCaption = latestPoint != null && latestPoint.is_carried_forward;
 
   const firstBal = chartData.length > 0 ? chartData[0].balance : 0;
   const lastBal = chartData.length > 0 ? chartData[chartData.length - 1].balance : 0;
@@ -116,13 +123,13 @@ export function AccountHistoryCard({ account, days, dateFormat }: AccountHistory
         <p className="text-xs text-muted-foreground">{account.institution_name}</p>
       </CardHeader>
       <CardContent>
-        {isLoading ? (
-          <p className="text-sm text-muted-foreground py-8 text-center">Loading...</p>
-        ) : chartData.length === 0 ? (
-          <p className="text-sm text-muted-foreground py-8 text-center">No history data.</p>
-        ) : (
-          <>
-            <ResponsiveContainer width="100%" height={180}>
+        <div style={{ height: 180 }} className="flex items-center justify-center">
+          {isLoading ? (
+            <p className="text-sm text-muted-foreground">Loading...</p>
+          ) : chartData.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No history data.</p>
+          ) : (
+            <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={chartData} margin={{ top: 4, right: 8, left: 8, bottom: 0 }}>
                 <defs>
                   {hasBreakdown ? (
@@ -144,7 +151,16 @@ export function AccountHistoryCard({ account, days, dateFormat }: AccountHistory
                   )}
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                <XAxis dataKey="date" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
+                <XAxis
+                  dataKey="ts"
+                  type="number"
+                  scale="time"
+                  domain={['dataMin', 'dataMax']}
+                  tickFormatter={(ts: number) => format(new Date(ts), dateFormat)}
+                  tick={{ fontSize: 10 }}
+                  tickLine={false}
+                  axisLine={false}
+                />
                 <YAxis
                   tickFormatter={yFormatter}
                   tick={{ fontSize: 10 }}
@@ -156,6 +172,7 @@ export function AccountHistoryCard({ account, days, dateFormat }: AccountHistory
                   content={
                     <AccountTooltip hasBreakdown={hasBreakdown} isLiability={isLiability} />
                   }
+                  animationDuration={0}
                 />
                 {hasBreakdown ? (
                   <>
@@ -167,6 +184,7 @@ export function AccountHistoryCard({ account, days, dateFormat }: AccountHistory
                       strokeWidth={2}
                       fill={`url(#secGrad-${account.uuid})`}
                       dot={false}
+                      isAnimationActive={false}
                     />
                     <Area
                       type="monotone"
@@ -176,6 +194,7 @@ export function AccountHistoryCard({ account, days, dateFormat }: AccountHistory
                       strokeWidth={2}
                       fill={`url(#cashGrad-${account.uuid})`}
                       dot={false}
+                      isAnimationActive={false}
                     />
                   </>
                 ) : (
@@ -188,17 +207,19 @@ export function AccountHistoryCard({ account, days, dateFormat }: AccountHistory
                     baseValue="dataMin"
                     dot={false}
                     activeDot={{ r: 3 }}
+                    isAnimationActive={false}
                   />
                 )}
               </AreaChart>
             </ResponsiveContainer>
-            {hasReviewNeeded && (
-              <p className="text-xs text-amber-600 mt-2 flex items-center gap-1">
-                <AlertTriangle className="h-3 w-3" />
-                Some data points may need review
-              </p>
-            )}
-          </>
+          )}
+        </div>
+        {showStalenessCaption && latestPoint && (
+          <p className="text-xs text-muted-foreground mt-2">
+            As of {format(parseISO(latestPoint.date), 'MMM d, yyyy')}: balance carried forward
+            {lastFreshPoint &&
+              ` (last snapshot: ${format(parseISO(lastFreshPoint.date), 'MMM d, yyyy')})`}
+          </p>
         )}
       </CardContent>
     </Card>

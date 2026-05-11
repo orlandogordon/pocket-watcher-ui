@@ -6,6 +6,9 @@ export interface NetWorthDataPoint {
   date: string;
   net_worth: number;
   total_unrealized_gains: number | null;
+  accounts_total: number;
+  accounts_fresh: number;
+  oldest_snapshot_date: string | null;
 }
 
 interface NetWorthHistoryResponse {
