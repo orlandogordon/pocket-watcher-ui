@@ -1,13 +1,15 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { format, parseISO } from 'date-fns';
-import { Plus, Pencil, Trash2, X, Tag, Scissors, CalendarRange, Link2, MoreHorizontal, ChevronUp, ChevronDown } from 'lucide-react';
-import { useTransactions, useTransactionStats } from '@/hooks/useTransactions';
+import { Plus, Pencil, Trash2, X, Tag, Scissors, CalendarRange, Link2, MoreHorizontal, ChevronUp, ChevronDown, ArrowLeftRight, AlertCircle } from 'lucide-react';
+import { useTransactions, useTransaction, useTransactionStats } from '@/hooks/useTransactions';
 import { useAccounts } from '@/hooks/useAccounts';
 import { useCategories } from '@/hooks/useCategories';
 import { useTags, useRemoveTagFromTransaction } from '@/hooks/useTags';
+import { useTransferSuggestions, useTransferOrphans } from '@/hooks/useTransferSuggestions';
 import { formatCurrency, formatTypeLabel } from '@/lib/format';
 import { TransactionFormDialog } from '@/components/transactions/TransactionFormDialog';
 import { DeleteTransactionDialog } from '@/components/transactions/DeleteTransactionDialog';
+import { TransferSuggestionsCard } from '@/components/transactions/TransferSuggestionsCard';
 import { ManageTagsDialog } from '@/components/tags/ManageTagsDialog';
 import { SplitCategoryDialog } from '@/components/transactions/SplitCategoryDialog';
 import { AmortizationDialog } from '@/components/transactions/AmortizationDialog';
@@ -94,7 +96,42 @@ export function TransactionsPage() {
   const { data: accounts } = useAccounts();
   const { data: categories } = useCategories();
   const { data: tags } = useTags();
+  const { data: suggestions } = useTransferSuggestions();
+  const { data: orphans } = useTransferOrphans();
   const removeTagMutation = useRemoveTagFromTransaction();
+
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  // When the user clicks "Edit" on an orphan row, we fetch the full
+  // TransactionResponse (the orphan endpoint returns a slimmed-down shape)
+  // and open the existing edit dialog once data lands.
+  const [orphanEditId, setOrphanEditId] = useState<string | null>(null);
+  const { data: orphanEditTx } = useTransaction(orphanEditId);
+  useEffect(() => {
+    if (orphanEditTx && orphanEditId) {
+      setEditTarget(orphanEditTx);
+      setFormOpen(true);
+      setOrphanEditId(null);
+    }
+  }, [orphanEditTx, orphanEditId]);
+
+  // Map of TRANSFER_IN/OUT transaction IDs to their inbox state.
+  // suggestion = part of a pending pair; orphan = no partner anywhere.
+  // Suggestion wins when a tx is in both (the orphans endpoint filters out
+  // rows that have a suggestion, but be defensive).
+  const transferRowFlags = useMemo(() => {
+    const map = new Map<string, 'suggestion' | 'orphan'>();
+    for (const o of orphans ?? []) map.set(o.id, 'orphan');
+    for (const s of suggestions ?? []) {
+      map.set(s.out_side.id, 'suggestion');
+      map.set(s.in_side.id, 'suggestion');
+    }
+    return map;
+  }, [suggestions, orphans]);
+
+  function scrollToCard() {
+    cardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
 
   const accountMap = new Map((accounts ?? []).map((a) => [a.uuid, a.account_name]));
   const allCategories = categories ?? [];
@@ -155,6 +192,16 @@ export function TransactionsPage() {
 
   return (
     <div className="flex flex-col gap-6 p-6">
+      {/* Transfer suggestions inbox — renders nothing when both lists are empty */}
+      <div ref={cardRef}>
+        <TransferSuggestionsCard
+          onEditOrphan={(txId, isInvestment) => {
+            if (isInvestment) return; // investments edited from Investments page
+            setOrphanEditId(txId);
+          }}
+        />
+      </div>
+
       {/* Stats bar */}
       <div className="grid grid-cols-4 gap-4">
         <Card>
@@ -444,7 +491,29 @@ export function TransactionsPage() {
                       {isExpense ? `−${formatCurrency(tx.amount)}` : formatCurrency(tx.amount)}
                     </TableCell>
                     <TableCell>
-                      <Badge variant="secondary">{formatTypeLabel(tx.transaction_type)}</Badge>
+                      <div className="flex items-center gap-1">
+                        <Badge variant="secondary">{formatTypeLabel(tx.transaction_type)}</Badge>
+                        {transferRowFlags.get(tx.id) === 'suggestion' && (
+                          <button
+                            type="button"
+                            onClick={scrollToCard}
+                            className="text-amber-600 hover:text-amber-700"
+                            title="Pending transfer suggestion — click to review"
+                          >
+                            <ArrowLeftRight className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                        {transferRowFlags.get(tx.id) === 'orphan' && (
+                          <button
+                            type="button"
+                            onClick={scrollToCard}
+                            className="text-muted-foreground hover:text-foreground"
+                            title="Orphan transfer — no partner row found"
+                          >
+                            <AlertCircle className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline" className="text-xs">

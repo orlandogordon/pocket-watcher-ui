@@ -1,3 +1,7 @@
+import type { TierASuggestion } from './transfers';
+
+export type { TierASuggestion };
+
 export const INSTITUTIONS = ['tdbank', 'amex', 'amzn-synchrony', 'schwab', 'tdameritrade', 'ameriprise'] as const;
 export type Institution = typeof INSTITUTIONS[number];
 
@@ -100,6 +104,7 @@ export interface PreviewItem {
   llm_processed_at: string | null;
   llm_suggestion: LLMSuggestion | null;
   merchant_source: MerchantSource;
+  tier_a_suggestion?: TierASuggestion | null;
 }
 
 export interface PreviewSummary {

@@ -62,6 +62,8 @@ export function useCreateTransaction() {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      // Type changes shrink/grow the transfer inbox (orphans + suggestions).
+      queryClient.invalidateQueries({ queryKey: ['transfers'] });
     },
   });
 }
@@ -76,6 +78,7 @@ export function useUpdateTransaction() {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['transfers'] });
     },
   });
 }
@@ -87,6 +90,7 @@ export function useDeleteTransaction() {
       apiFetch<void>(`/transactions/${uuid}`, { method: 'DELETE' }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['transfers'] });
     },
   });
 }

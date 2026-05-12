@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { ChevronDown, ChevronRight, Sparkles, X } from 'lucide-react';
+import { ArrowLeftRight, ChevronDown, ChevronRight, RotateCcw, Sparkles, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
@@ -74,6 +74,70 @@ function SuggestedPill() {
       <Sparkles className="h-2.5 w-2.5" />
       Suggested
     </Badge>
+  );
+}
+
+const TIER_A_REVERT_TYPE = 'PURCHASE';
+
+function TierAProposal({
+  partnerName,
+  matchedToken,
+  currentType,
+  onRevert,
+  onReapply,
+  disabled,
+}: {
+  partnerName: string | null;
+  matchedToken: string | null;
+  currentType: string;
+  onRevert: () => void;
+  onReapply: () => void;
+  disabled: boolean;
+}) {
+  const accepted = currentType === 'TRANSFER_OUT';
+  const partner = partnerName ?? 'another account';
+  const tooltip = matchedToken
+    ? `Tier A pairing: description token "${matchedToken}" matched ${partner}.`
+    : `Tier A pairing: matched ${partner}.`;
+
+  return (
+    <div
+      className={cn(
+        'flex items-center gap-1.5 rounded-md border px-1.5 py-0.5 text-[11px]',
+        accepted
+          ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+          : 'border-muted bg-muted/40 text-muted-foreground',
+      )}
+      title={tooltip}
+    >
+      <ArrowLeftRight className="h-3 w-3 shrink-0" />
+      <span className="truncate">
+        {accepted ? 'Transfer to' : 'Tier A suggested transfer to'}{' '}
+        <span className="font-medium">{partner}</span>
+      </span>
+      {accepted ? (
+        <button
+          type="button"
+          onClick={onRevert}
+          disabled={disabled}
+          className="ml-1 underline-offset-2 hover:underline disabled:opacity-50"
+          title="Revert this row to a non-transfer type"
+        >
+          Revert
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={onReapply}
+          disabled={disabled}
+          className="ml-1 flex items-center gap-0.5 underline-offset-2 hover:underline disabled:opacity-50"
+          title="Re-apply Tier A pairing (set type to Transfer Out)"
+        >
+          <RotateCcw className="h-2.5 w-2.5" />
+          Re-apply
+        </button>
+      )}
+    </div>
   );
 }
 
@@ -289,6 +353,22 @@ function ReadyRow({
                 )}
                 {suggestedMerchant && <SuggestedPill />}
               </div>
+            )}
+            {item.tier_a_suggestion && (
+              <TierAProposal
+                partnerName={item.tier_a_suggestion.suggested_partner_account_name}
+                matchedToken={item.tier_a_suggestion.matched_token}
+                currentType={transactionType}
+                disabled={disabled}
+                onRevert={() => {
+                  setTransactionType(TIER_A_REVERT_TYPE);
+                  saveEdits({ transaction_type: TIER_A_REVERT_TYPE });
+                }}
+                onReapply={() => {
+                  setTransactionType('TRANSFER_OUT');
+                  saveEdits({ transaction_type: 'TRANSFER_OUT' });
+                }}
+              />
             )}
             {willNeedReview && (
               <div

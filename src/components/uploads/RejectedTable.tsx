@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { RotateCcw } from 'lucide-react';
+import { ArrowLeftRight, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -52,7 +52,27 @@ function RejectedRow({
         <Checkbox checked={selected} onCheckedChange={() => onToggleSelect(item.temp_id)} disabled={disabled} />
       </TableCell>
       <TableCell className="text-xs">{String(edited.transaction_date ?? pd.transaction_date)}</TableCell>
-      <TableCell className="text-xs">{String(edited.description ?? pd.description)}</TableCell>
+      <TableCell className="text-xs">
+        <div className="flex flex-col gap-0.5">
+          <span>{String(edited.description ?? pd.description)}</span>
+          {item.tier_a_suggestion && (
+            <span
+              className="inline-flex items-center gap-1 text-[10px] text-muted-foreground"
+              title={
+                item.tier_a_suggestion.matched_token
+                  ? `Tier A matched token "${item.tier_a_suggestion.matched_token}"`
+                  : 'Tier A transfer suggestion'
+              }
+            >
+              <ArrowLeftRight className="h-2.5 w-2.5" />
+              Transfer to{' '}
+              <span className="font-medium">
+                {item.tier_a_suggestion.suggested_partner_account_name ?? 'another account'}
+              </span>
+            </span>
+          )}
+        </div>
+      </TableCell>
       <TableCell className="text-xs text-right">
         {formatCurrency(parseFloat(displayAmount))}
       </TableCell>
