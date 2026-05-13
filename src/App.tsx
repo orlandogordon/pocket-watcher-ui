@@ -6,6 +6,7 @@ import { SignInPage } from '@/pages/SignInPage';
 import { DashboardPage } from '@/pages/DashboardPage';
 import { AccountsPage } from '@/pages/AccountsPage';
 import { TransactionsPage } from '@/pages/TransactionsPage';
+import { InboxPage } from '@/pages/InboxPage';
 import { TagsPage } from '@/pages/TagsPage';
 import { BudgetsPage } from '@/pages/BudgetsPage';
 import { BudgetTemplatesPage } from '@/pages/BudgetTemplatesPage';
@@ -32,6 +33,7 @@ export default function App() {
               <Route index element={<DashboardPage />} />
               <Route path="accounts" element={<AccountsPage />} />
               <Route path="transactions" element={<TransactionsPage />} />
+              <Route path="inbox" element={<InboxPage />} />
               <Route path="tags" element={<TagsPage />} />
               <Route path="budgets" element={<BudgetsPage />} />
               <Route path="budgets/templates" element={<BudgetTemplatesPage />} />

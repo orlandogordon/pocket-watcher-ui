@@ -1,7 +1,8 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { format, parseISO } from 'date-fns';
 import { Plus, Pencil, Trash2, X, Tag, Scissors, CalendarRange, Link2, MoreHorizontal, ChevronUp, ChevronDown, ArrowLeftRight, AlertCircle } from 'lucide-react';
-import { useTransactions, useTransaction, useTransactionStats } from '@/hooks/useTransactions';
+import { useTransactions, useTransactionStats } from '@/hooks/useTransactions';
 import { useAccounts } from '@/hooks/useAccounts';
 import { useCategories } from '@/hooks/useCategories';
 import { useTags, useRemoveTagFromTransaction } from '@/hooks/useTags';
@@ -9,7 +10,6 @@ import { useTransferSuggestions, useTransferOrphans } from '@/hooks/useTransferS
 import { formatCurrency, formatTypeLabel } from '@/lib/format';
 import { TransactionFormDialog } from '@/components/transactions/TransactionFormDialog';
 import { DeleteTransactionDialog } from '@/components/transactions/DeleteTransactionDialog';
-import { TransferSuggestionsCard } from '@/components/transactions/TransferSuggestionsCard';
 import { ManageTagsDialog } from '@/components/tags/ManageTagsDialog';
 import { SplitCategoryDialog } from '@/components/transactions/SplitCategoryDialog';
 import { AmortizationDialog } from '@/components/transactions/AmortizationDialog';
@@ -69,6 +69,7 @@ const EMPTY_FILTERS: TransactionFilters = {
 };
 
 export function TransactionsPage() {
+  const navigate = useNavigate();
   const [page, setPage] = useState(0);
   const [filters, setFilters] = useState<TransactionFilters>(EMPTY_FILTERS);
   const [pendingSearch, setPendingSearch] = useState('');
@@ -100,21 +101,6 @@ export function TransactionsPage() {
   const { data: orphans } = useTransferOrphans();
   const removeTagMutation = useRemoveTagFromTransaction();
 
-  const cardRef = useRef<HTMLDivElement>(null);
-
-  // When the user clicks "Edit" on an orphan row, we fetch the full
-  // TransactionResponse (the orphan endpoint returns a slimmed-down shape)
-  // and open the existing edit dialog once data lands.
-  const [orphanEditId, setOrphanEditId] = useState<string | null>(null);
-  const { data: orphanEditTx } = useTransaction(orphanEditId);
-  useEffect(() => {
-    if (orphanEditTx && orphanEditId) {
-      setEditTarget(orphanEditTx);
-      setFormOpen(true);
-      setOrphanEditId(null);
-    }
-  }, [orphanEditTx, orphanEditId]);
-
   // Map of TRANSFER_IN/OUT transaction IDs to their inbox state.
   // suggestion = part of a pending pair; orphan = no partner anywhere.
   // Suggestion wins when a tx is in both (the orphans endpoint filters out
@@ -129,11 +115,16 @@ export function TransactionsPage() {
     return map;
   }, [suggestions, orphans]);
 
-  function scrollToCard() {
-    cardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  function goToInbox() {
+    navigate('/inbox');
   }
 
   const accountMap = new Map((accounts ?? []).map((a) => [a.uuid, a.account_name]));
+  const needsReviewTag = (tags ?? []).find(
+    (t) => t.is_system && t.tag_name === 'Needs Review',
+  );
+  const needsReviewActive =
+    needsReviewTag != null && (filters.tag_uuid ?? []).includes(needsReviewTag.id);
   const allCategories = categories ?? [];
   const parentCategories = allCategories.filter((c) => !c.parent_category_uuid);
   const subcategoryOptions = allCategories.filter(
@@ -157,6 +148,17 @@ export function TransactionsPage() {
   function clearFilters() {
     setFilters(EMPTY_FILTERS);
     setPendingSearch('');
+  }
+
+  function toggleNeedsReview() {
+    if (!needsReviewTag) return;
+    setFilters((prev) => {
+      const current = prev.tag_uuid ?? [];
+      const next = needsReviewActive
+        ? current.filter((id) => id !== needsReviewTag.id)
+        : [...current, needsReviewTag.id];
+      return { ...prev, tag_uuid: next.length ? next : undefined };
+    });
   }
 
   function openCreate() {
@@ -192,16 +194,6 @@ export function TransactionsPage() {
 
   return (
     <div className="flex flex-col gap-6 p-6">
-      {/* Transfer suggestions inbox — renders nothing when both lists are empty */}
-      <div ref={cardRef}>
-        <TransferSuggestionsCard
-          onEditOrphan={(txId, isInvestment) => {
-            if (isInvestment) return; // investments edited from Investments page
-            setOrphanEditId(txId);
-          }}
-        />
-      </div>
-
       {/* Stats bar */}
       <div className="grid grid-cols-4 gap-4">
         <Card>
@@ -348,6 +340,20 @@ export function TransactionsPage() {
             }))
           }
         />
+
+        {needsReviewTag && (
+          <Button
+            type="button"
+            size="sm"
+            variant={needsReviewActive ? 'default' : 'outline'}
+            onClick={toggleNeedsReview}
+            title="Toggle the Needs Review system tag filter"
+            className={needsReviewActive ? '' : 'border-amber-300 text-amber-700 hover:bg-amber-50'}
+          >
+            <AlertCircle className="mr-1 h-3.5 w-3.5" />
+            Needs Review
+          </Button>
+        )}
 
         <Input
           type="date"
@@ -496,9 +502,9 @@ export function TransactionsPage() {
                         {transferRowFlags.get(tx.id) === 'suggestion' && (
                           <button
                             type="button"
-                            onClick={scrollToCard}
+                            onClick={goToInbox}
                             className="text-amber-600 hover:text-amber-700"
-                            title="Pending transfer suggestion — click to review"
+                            title="Pending transfer suggestion — open inbox"
                           >
                             <ArrowLeftRight className="h-3.5 w-3.5" />
                           </button>
@@ -506,9 +512,9 @@ export function TransactionsPage() {
                         {transferRowFlags.get(tx.id) === 'orphan' && (
                           <button
                             type="button"
-                            onClick={scrollToCard}
+                            onClick={goToInbox}
                             className="text-muted-foreground hover:text-foreground"
-                            title="Orphan transfer — no partner row found"
+                            title="Orphan transfer — open inbox"
                           >
                             <AlertCircle className="h-3.5 w-3.5" />
                           </button>

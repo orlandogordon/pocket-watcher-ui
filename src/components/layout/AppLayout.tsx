@@ -4,6 +4,7 @@ import {
   LayoutDashboard,
   Wallet,
   ArrowLeftRight,
+  Inbox,
   PiggyBank,
   TrendingUp,
   CreditCard,
@@ -20,12 +21,14 @@ import {
 } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAttentionCount } from '@/hooks/useDataHealth';
 import { Button } from '@/components/ui/button';
 
 const primaryNav = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/accounts', label: 'Accounts', icon: Wallet },
   { to: '/transactions', label: 'Transactions', icon: ArrowLeftRight },
+  { to: '/inbox', label: 'Inbox', icon: Inbox, badge: 'attention' as const },
   { to: '/budgets', label: 'Budgets', icon: PiggyBank },
   { to: '/investments', label: 'Investments', icon: TrendingUp },
   { to: '/debt', label: 'Debt', icon: CreditCard },
@@ -40,16 +43,37 @@ const utilityNav = [
   { to: '/admin', label: 'Admin', icon: Settings },
 ];
 
+function AttentionBadge() {
+  // Fixed-width slot so the badge appearing later does not reflow the row.
+  // Backend /count is ~2s warm; render the slot empty until it lands.
+  const { data } = useAttentionCount();
+  const total = data?.total ?? null;
+  return (
+    <span className="ml-auto inline-flex w-7 justify-end">
+      {total !== null && total > 0 && (
+        <span
+          className="inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-amber-500/90 px-1.5 text-[10px] font-semibold text-white"
+          title={`${total} item${total === 1 ? '' : 's'} need attention`}
+        >
+          {total > 999 ? '999+' : total}
+        </span>
+      )}
+    </span>
+  );
+}
+
 function NavItem({
   to,
   label,
   icon: Icon,
   end,
+  badge,
 }: {
   to: string;
   label: string;
   icon: React.ElementType;
   end?: boolean;
+  badge?: 'attention';
 }) {
   return (
     <NavLink
@@ -66,6 +90,7 @@ function NavItem({
     >
       <Icon className="h-4 w-4 shrink-0" />
       {label}
+      {badge === 'attention' && <AttentionBadge />}
     </NavLink>
   );
 }
