@@ -182,11 +182,13 @@ export function TransactionFormDialog({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {(accounts ?? []).map((a) => (
-                          <SelectItem key={a.uuid} value={a.uuid}>
-                            {a.account_name}
-                          </SelectItem>
-                        ))}
+                        {(accounts ?? [])
+                          .filter((a) => a.account_type !== 'INVESTMENT')
+                          .map((a) => (
+                            <SelectItem key={a.uuid} value={a.uuid}>
+                              {a.account_name}
+                            </SelectItem>
+                          ))}
                       </SelectContent>
                     </Select>
                     <FormMessage />

@@ -235,7 +235,9 @@ export function TransactionsPage() {
         <MultiSelect
           className="w-44"
           placeholder="All accounts"
-          options={(accounts ?? []).map((a) => ({ value: a.uuid, label: a.account_name }))}
+          options={(accounts ?? [])
+            .filter((a) => a.account_type !== 'INVESTMENT')
+            .map((a) => ({ value: a.uuid, label: a.account_name }))}
           value={filters.account_uuid ?? []}
           onChange={(selected) =>
             setFilters((prev) => ({
