@@ -15,7 +15,7 @@ interface NetWorthHistoryResponse {
   data: NetWorthDataPoint[];
   start_date: string;
   end_date: string;
-  total_days: number;
+  total_points: number;
 }
 
 export function useNetWorthHistory(days = 30) {
