@@ -130,11 +130,11 @@ export interface TransactionRelationshipUpdate {
 }
 
 export interface TransactionFilters {
-  account_uuid?: string;
+  account_uuid?: string[];
   category_uuid?: string[];
   subcategory_uuid?: string[];
   tag_uuid?: string[];
-  transaction_type?: string;
+  transaction_type?: TransactionType[];
   date_from?: string;
   date_to?: string;
   amount_min?: string;

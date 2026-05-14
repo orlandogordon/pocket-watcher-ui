@@ -20,13 +20,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { MultiSelect } from '@/components/ui/multi-select';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
   Table,
   TableBody,
   TableCell,
@@ -40,7 +33,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import type { TransactionFilters, TransactionResponse } from '@/types/transactions';
+import type { TransactionFilters, TransactionResponse, TransactionType } from '@/types/transactions';
 
 const TRANSACTION_TYPES = [
   'PURCHASE',
@@ -120,11 +113,6 @@ export function TransactionsPage() {
   }
 
   const accountMap = new Map((accounts ?? []).map((a) => [a.uuid, a.account_name]));
-  const needsReviewTag = (tags ?? []).find(
-    (t) => t.is_system && t.tag_name === 'Needs Review',
-  );
-  const needsReviewActive =
-    needsReviewTag != null && (filters.tag_uuid ?? []).includes(needsReviewTag.id);
   const allCategories = categories ?? [];
   const parentCategories = allCategories.filter((c) => !c.parent_category_uuid);
   const subcategoryOptions = allCategories.filter(
@@ -148,17 +136,6 @@ export function TransactionsPage() {
   function clearFilters() {
     setFilters(EMPTY_FILTERS);
     setPendingSearch('');
-  }
-
-  function toggleNeedsReview() {
-    if (!needsReviewTag) return;
-    setFilters((prev) => {
-      const current = prev.tag_uuid ?? [];
-      const next = needsReviewActive
-        ? current.filter((id) => id !== needsReviewTag.id)
-        : [...current, needsReviewTag.id];
-      return { ...prev, tag_uuid: next.length ? next : undefined };
-    });
   }
 
   function openCreate() {
@@ -255,39 +232,31 @@ export function TransactionsPage() {
 
       {/* Filter bar */}
       <div className="flex flex-wrap items-center gap-2">
-        <Select
-          value={filters.account_uuid ?? '_all_'}
-          onValueChange={(v) => setFilter('account_uuid', v === '_all_' ? undefined : v)}
-        >
-          <SelectTrigger className="w-44">
-            <SelectValue placeholder="All accounts" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="_all_">All accounts</SelectItem>
-            {(accounts ?? []).map((a) => (
-              <SelectItem key={a.uuid} value={a.uuid}>
-                {a.account_name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <MultiSelect
+          className="w-44"
+          placeholder="All accounts"
+          options={(accounts ?? []).map((a) => ({ value: a.uuid, label: a.account_name }))}
+          value={filters.account_uuid ?? []}
+          onChange={(selected) =>
+            setFilters((prev) => ({
+              ...prev,
+              account_uuid: selected.length ? selected : undefined,
+            }))
+          }
+        />
 
-        <Select
-          value={filters.transaction_type ?? '_all_'}
-          onValueChange={(v) => setFilter('transaction_type', v === '_all_' ? undefined : v)}
-        >
-          <SelectTrigger className="w-40">
-            <SelectValue placeholder="All types" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="_all_">All types</SelectItem>
-            {TRANSACTION_TYPES.map((t) => (
-              <SelectItem key={t} value={t}>
-                {formatTypeLabel(t)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <MultiSelect
+          className="w-40"
+          placeholder="All types"
+          options={TRANSACTION_TYPES.map((t) => ({ value: t, label: formatTypeLabel(t) }))}
+          value={filters.transaction_type ?? []}
+          onChange={(selected) =>
+            setFilters((prev) => ({
+              ...prev,
+              transaction_type: selected.length ? (selected as TransactionType[]) : undefined,
+            }))
+          }
+        />
 
         <MultiSelect
           className="w-44"
@@ -340,20 +309,6 @@ export function TransactionsPage() {
             }))
           }
         />
-
-        {needsReviewTag && (
-          <Button
-            type="button"
-            size="sm"
-            variant={needsReviewActive ? 'default' : 'outline'}
-            onClick={toggleNeedsReview}
-            title="Toggle the Needs Review system tag filter"
-            className={needsReviewActive ? '' : 'border-amber-300 text-amber-700 hover:bg-amber-50'}
-          >
-            <AlertCircle className="mr-1 h-3.5 w-3.5" />
-            Needs Review
-          </Button>
-        )}
 
         <Input
           type="date"
