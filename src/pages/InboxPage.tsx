@@ -112,6 +112,19 @@ function getTypeLabel(item: AttentionItem): string | null {
   return null;
 }
 
+function getCategory(item: AttentionItem): string | null {
+  const d = item.details as Record<string, unknown>;
+  const parent = (d.category_name as string | undefined) ?? null;
+  const sub = (d.subcategory_name as string | undefined) ?? null;
+  if (parent && sub) return `${parent} / ${sub}`;
+  return parent ?? null;
+}
+
+function getComments(item: AttentionItem): string | null {
+  const d = item.details as Record<string, unknown>;
+  return (d.comments as string | undefined) ?? null;
+}
+
 function ActionButton({ item, action }: { item: AttentionItem; action: AttentionAction }) {
   const mut = useAttentionAction();
   const variant = action.method === 'DELETE' ? 'outline' : 'default';
@@ -220,6 +233,10 @@ export function InboxPage() {
   // Bulk-select scope: only Needs Review carries volume and a clean batch
   // action (DELETE the system tag). Other kinds have per-item actions only.
   const bulkEligible = tab === 'needs_review';
+  // Category/Comments only exist on regular TransactionDB rows
+  // (needs_review items today). Hide the columns on tabs where the
+  // details payload never carries them so we don't waste row width.
+  const showCategoryComments = tab === 'needs_review' || tab === 'all';
 
   function toggleSelected(id: string) {
     setSelected((prev) => {
@@ -350,7 +367,8 @@ export function InboxPage() {
           </div>
         </div>
       ) : (
-        <div className="flex-1 overflow-hidden rounded-md border bg-background">
+        <div className="flex-1 overflow-x-auto overflow-y-hidden rounded-md border bg-background">
+         <div className={cn('h-full flex flex-col', showCategoryComments && 'min-w-[1400px]')}>
           {/* Table header */}
           <div className="flex items-center gap-3 border-b bg-muted/40 px-3 py-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
             {bulkEligible && (
@@ -368,12 +386,14 @@ export function InboxPage() {
             <div className="flex-1 min-w-0">Description</div>
             <div className="w-36">Merchant</div>
             <div className="w-32">Account</div>
+            {showCategoryComments && <div className="w-40">Category</div>}
             <div className="w-24">Type</div>
             <div className="w-28 text-right">Amount</div>
+            {showCategoryComments && <div className="w-32">Comments</div>}
             <div className="w-[200px] text-right pr-1">Actions</div>
           </div>
 
-          <div ref={parentRef} className="h-[calc(100%-2.25rem)] overflow-y-auto">
+          <div ref={parentRef} className="flex-1 overflow-y-auto">
             <div
               style={{
                 height: `${rowVirtualizer.getTotalSize()}px`,
@@ -390,6 +410,8 @@ export function InboxPage() {
                 const typeLabel = getTypeLabel(item);
                 const merchant = getMerchant(item);
                 const acctName = getAccountName(item);
+                const category = getCategory(item);
+                const comments = getComments(item);
 
                 return (
                   <div
@@ -452,6 +474,14 @@ export function InboxPage() {
                     >
                       {acctName ?? '—'}
                     </div>
+                    {showCategoryComments && (
+                      <div
+                        className="w-40 truncate text-xs text-muted-foreground"
+                        title={category ?? undefined}
+                      >
+                        {category ?? '—'}
+                      </div>
+                    )}
                     <div className="w-24 text-xs">
                       {typeLabel ? (
                         <Badge variant="secondary" className="text-[10px]">
@@ -464,6 +494,14 @@ export function InboxPage() {
                     <div className="w-28 text-right font-medium tabular-nums">
                       {amount ? formatCurrency(amount) : '—'}
                     </div>
+                    {showCategoryComments && (
+                      <div
+                        className="w-32 truncate text-xs text-muted-foreground"
+                        title={comments ?? undefined}
+                      >
+                        {comments ?? '—'}
+                      </div>
+                    )}
                     <div className="w-[200px] flex items-center justify-end gap-1.5 pr-1">
                       {item.actions.length > 0 ? (
                         item.actions.map((action, idx) => (
@@ -505,6 +543,7 @@ export function InboxPage() {
               })}
             </div>
           </div>
+         </div>
         </div>
       )}
 
