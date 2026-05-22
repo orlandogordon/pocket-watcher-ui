@@ -1,6 +1,6 @@
 import { Fragment, useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { DollarSign, CreditCard, Percent, Calculator } from 'lucide-react';
+import { DollarSign, CreditCard, Percent, Calculator, Plus } from 'lucide-react';
 import { useAccounts } from '@/hooks/useAccounts';
 import { calculatePayoffSchedule } from '@/lib/debtCalculator';
 import { formatCurrency } from '@/lib/format';
@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
+import { PaymentFormDialog } from '@/components/debt/PaymentFormDialog';
 import {
   Select,
   SelectContent,
@@ -108,6 +109,9 @@ export function DebtPage() {
       0,
     );
   }, [debtAccounts]);
+
+  // Per-row payment dialog state
+  const [paymentDialogUuid, setPaymentDialogUuid] = useState<string | null>(null);
 
   // Calculator state
   const [strategy, setStrategy] = useState<DebtStrategy>('AVALANCHE');
@@ -234,6 +238,7 @@ export function DebtPage() {
                   <TableHead className="text-right">Rate</TableHead>
                   <TableHead className="text-right">Min Payment</TableHead>
                   <TableHead>Institution</TableHead>
+                  <TableHead className="w-[150px]" />
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -242,7 +247,7 @@ export function DebtPage() {
                     <TableCell className="font-medium">
                       <Link
                         to={`/debt/${a.uuid}`}
-                        className="hover:underline"
+                        className="underline underline-offset-2"
                       >
                         {a.account_name}
                       </Link>
@@ -259,10 +264,26 @@ export function DebtPage() {
                     <TableCell className="text-muted-foreground">
                       {a.institution_name}
                     </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setPaymentDialogUuid(a.uuid)}
+                      >
+                        <Plus className="h-3.5 w-3.5 mr-1" /> Record Payment
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
+            {paymentDialogUuid && (
+              <PaymentFormDialog
+                open={!!paymentDialogUuid}
+                onOpenChange={(open) => { if (!open) setPaymentDialogUuid(null); }}
+                loanAccountUuid={paymentDialogUuid}
+              />
+            )}
           </CardContent>
         </Card>
       ) : (

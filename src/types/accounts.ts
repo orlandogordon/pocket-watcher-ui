@@ -17,6 +17,7 @@ export interface AccountResponse {
   interest_rate_type?: 'FIXED' | 'VARIABLE';
   minimum_payment?: string;
   original_principal?: string;
+  accrued_interest?: string;
   comments?: string;
   created_at: string;
   updated_at: string;

@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { format, parseISO } from 'date-fns';
-import { ArrowLeft, Plus, Trash2, DollarSign, Percent, CreditCard, Landmark } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, DollarSign, Percent, CreditCard, Landmark, TrendingUp } from 'lucide-react';
 import { useAccounts } from '@/hooks/useAccounts';
 import { useDebtPayments } from '@/hooks/useDebt';
 import { formatCurrency } from '@/lib/format';
@@ -92,7 +92,7 @@ export function DebtDetailPage() {
       {/* Stat Cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
-          title="Current Balance"
+          title={account.account_type === 'LOAN' ? 'Principal Balance' : 'Current Balance'}
           value={formatCurrency(account.balance)}
           icon={DollarSign}
         />
@@ -105,11 +105,19 @@ export function DebtDetailPage() {
           }
           icon={Percent}
         />
-        <StatCard
-          title="Min Payment"
-          value={account.minimum_payment ? formatCurrency(account.minimum_payment) : '—'}
-          icon={CreditCard}
-        />
+        {account.account_type === 'LOAN' && account.accrued_interest && parseFloat(account.accrued_interest) > 0 ? (
+          <StatCard
+            title="Accrued Interest"
+            value={formatCurrency(account.accrued_interest)}
+            icon={TrendingUp}
+          />
+        ) : (
+          <StatCard
+            title="Min Payment"
+            value={account.minimum_payment ? formatCurrency(account.minimum_payment) : '—'}
+            icon={CreditCard}
+          />
+        )}
         <StatCard
           title="Original Principal"
           value={account.original_principal ? formatCurrency(account.original_principal) : '—'}
@@ -163,7 +171,7 @@ export function DebtDetailPage() {
                       {formatCurrency(p.interest_amount)}
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
-                      {formatCurrency(p.remaining_balance)}
+                      {formatCurrency(p.remaining_balance_after_payment)}
                     </TableCell>
                     <TableCell className="text-muted-foreground">
                       {p.description ?? '—'}

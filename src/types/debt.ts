@@ -54,14 +54,14 @@ export interface DebtPaymentResponse {
   uuid: string;
   loan_account_uuid: string;
   payment_source_account_uuid: string | null;
+  transaction_uuid: string | null;
   payment_amount: string;
   principal_amount: string;
   interest_amount: string;
-  remaining_balance: string;
+  remaining_balance_after_payment: string;
   payment_date: string;
   description: string | null;
   created_at: string;
-  updated_at: string;
 }
 
 export interface DebtPaymentCreate {
