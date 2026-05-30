@@ -7,7 +7,7 @@ export type AccountType =
   | 'OTHER';
 
 export interface AccountResponse {
-  uuid: string;
+  id: string;
   account_name: string;
   account_type: AccountType;
   institution_name: string;

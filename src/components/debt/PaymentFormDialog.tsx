@@ -168,7 +168,7 @@ export function PaymentFormDialog({
                     </FormControl>
                     <SelectContent>
                       {sourceAccounts.map((a) => (
-                        <SelectItem key={a.uuid} value={a.uuid}>
+                        <SelectItem key={a.id} value={a.id}>
                           {a.account_name}
                         </SelectItem>
                       ))}

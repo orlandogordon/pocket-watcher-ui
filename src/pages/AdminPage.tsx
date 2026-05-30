@@ -88,7 +88,7 @@ function RecalculateRow({ account }: { account: AccountResponse }) {
   const handleSubmit = () => {
     if (!startDate || !endDate) return;
     recalculate.mutate(
-      { accountUuid: account.uuid, startDate, endDate },
+      { accountUuid: account.id, startDate, endDate },
       { onSuccess: () => { setStartDate(''); setEndDate(''); } }
     );
   };
@@ -122,7 +122,7 @@ function RecalculateRow({ account }: { account: AccountResponse }) {
         Recalculate
       </Button>
       {recalculate.isSuccess && (
-        <span className="text-xs text-green-600">Job #{recalculate.data.job_id} started</span>
+        <span className="text-xs text-green-600">Job #{recalculate.data.job_uuid} started</span>
       )}
       {recalculate.isError && (
         <span className="text-xs text-destructive">{recalculate.error.message}</span>
@@ -143,7 +143,7 @@ function SnapshotActionsSection({ accounts }: { accounts: AccountResponse[] }) {
           <div className="space-y-3 pt-2">
             <h4 className="text-sm font-medium text-muted-foreground">Recalculate per Account</h4>
             {accounts.map((acc) => (
-              <RecalculateRow key={acc.uuid} account={acc} />
+              <RecalculateRow key={acc.id} account={acc} />
             ))}
           </div>
         )}
@@ -232,7 +232,7 @@ function RecentJobsSection({ accounts }: { accounts: AccountResponse[] }) {
           </SelectTrigger>
           <SelectContent>
             {accounts.map((acc) => (
-              <SelectItem key={acc.uuid} value={acc.uuid}>
+              <SelectItem key={acc.id} value={acc.id}>
                 {acc.account_name}
               </SelectItem>
             ))}
@@ -348,7 +348,7 @@ function SnapshotEditDialog({
       data.dismiss_review = true;
     }
     updateSnapshot.mutate(
-      { accountUuid, snapshotUuid: snapshot.snapshot_uuid, data },
+      { accountUuid, snapshotUuid: snapshot.id, data },
       { onSuccess: () => onOpenChange(false) },
     );
   }
@@ -424,7 +424,7 @@ function NeedsReviewAccount({
 }: {
   account: AccountResponse;
 }) {
-  const { data: snapshots, isLoading } = useNeedsReview(account.uuid);
+  const { data: snapshots, isLoading } = useNeedsReview(account.id);
   const recalculate = useRecalculateSnapshots();
   const dismiss = useDismissSnapshotReview();
   const [dismissTarget, setDismissTarget] = useState<string[] | null>(null);
@@ -434,7 +434,7 @@ function NeedsReviewAccount({
     if (!snapshots?.length) return;
     const dates = snapshots.map((s) => s.value_date).sort();
     recalculate.mutate({
-      accountUuid: account.uuid,
+      accountUuid: account.id,
       startDate: dates[0],
       endDate: dates[dates.length - 1],
     });
@@ -444,7 +444,7 @@ function NeedsReviewAccount({
     if (!dismissTarget) return;
     dismiss.mutate(
       {
-        accountUuid: account.uuid,
+        accountUuid: account.id,
         snapshotUuids: dismissTarget,
         reason: reason || undefined,
       },
@@ -464,7 +464,7 @@ function NeedsReviewAccount({
   }
 
   const dismissLabel = dismissTarget?.length === 1
-    ? `Dismiss snapshot for ${snapshots.find((s) => s.snapshot_uuid === dismissTarget[0])?.value_date ?? 'this date'}?`
+    ? `Dismiss snapshot for ${snapshots.find((s) => s.id === dismissTarget[0])?.value_date ?? 'this date'}?`
     : `Dismiss all ${snapshots.length} flagged snapshots for ${account.account_name}?`;
 
   return (
@@ -481,7 +481,7 @@ function NeedsReviewAccount({
           <Button
             size="sm"
             variant="outline"
-            onClick={() => setDismissTarget(snapshots.map((s) => s.snapshot_uuid))}
+            onClick={() => setDismissTarget(snapshots.map((s) => s.id))}
             disabled={dismiss.isPending}
           >
             <CheckCircle className="mr-1 h-3 w-3" />
@@ -510,7 +510,7 @@ function NeedsReviewAccount({
         </TableHeader>
         <TableBody>
           {snapshots.map((s) => (
-            <TableRow key={s.snapshot_uuid}>
+            <TableRow key={s.id}>
               <TableCell className="text-sm">{s.value_date}</TableCell>
               <TableCell className="text-right text-sm">{formatCurrency(parseFloat(s.balance))}</TableCell>
               <TableCell className="text-sm text-muted-foreground">{s.snapshot_source}</TableCell>
@@ -530,7 +530,7 @@ function NeedsReviewAccount({
                     size="sm"
                     variant="ghost"
                     className="h-7 text-xs"
-                    onClick={() => setDismissTarget([s.snapshot_uuid])}
+                    onClick={() => setDismissTarget([s.id])}
                     disabled={dismiss.isPending}
                   >
                     Dismiss
@@ -552,11 +552,11 @@ function NeedsReviewAccount({
         open={editTarget !== null}
         onOpenChange={(open) => { if (!open) setEditTarget(null); }}
         snapshot={editTarget}
-        accountUuid={account.uuid}
+        accountUuid={account.id}
         accountName={account.account_name}
       />
       {recalculate.isSuccess && (
-        <p className="text-xs text-green-600">Recalculation job #{recalculate.data.job_id} started</p>
+        <p className="text-xs text-green-600">Recalculation job #{recalculate.data.job_uuid} started</p>
       )}
       {recalculate.isError && (
         <p className="text-xs text-destructive">{recalculate.error.message}</p>
@@ -576,7 +576,7 @@ function NeedsReviewSection({ investmentAccounts }: { investmentAccounts: Accoun
           <p className="text-sm text-muted-foreground">No investment accounts found.</p>
         )}
         {investmentAccounts.map((acc) => (
-          <NeedsReviewAccount key={acc.uuid} account={acc} />
+          <NeedsReviewAccount key={acc.id} account={acc} />
         ))}
       </CardContent>
     </Card>

@@ -83,7 +83,7 @@ function AccountTooltip({
 }
 
 export function AccountHistoryCard({ account, days, dateFormat }: AccountHistoryCardProps) {
-  const { data: history, isLoading } = useAccountHistory(account.uuid, days);
+  const { data: history, isLoading } = useAccountHistory(account.id, days);
   const isInvestment = account.account_type === 'INVESTMENT';
 
   const dataPoints = history?.data ?? [];
@@ -111,7 +111,7 @@ export function AccountHistoryCard({ account, days, dateFormat }: AccountHistory
   const isLiability = account.account_type === 'CREDIT_CARD' || account.account_type === 'LOAN';
   const trendUp = lastBal >= firstBal;
   const strokeColor = (isLiability ? !trendUp : trendUp) ? '#16a34a' : '#dc2626';
-  const gradId = `balGrad-${account.uuid}`;
+  const gradId = `balGrad-${account.id}`;
 
   const yFormatter = (v: number) =>
     v >= 1000 || v <= -1000 ? `$${(v / 1000).toFixed(0)}k` : `$${v}`;
@@ -134,11 +134,11 @@ export function AccountHistoryCard({ account, days, dateFormat }: AccountHistory
                 <defs>
                   {hasBreakdown ? (
                     <>
-                      <linearGradient id={`secGrad-${account.uuid}`} x1="0" y1="0" x2="0" y2="1">
+                      <linearGradient id={`secGrad-${account.id}`} x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.2} />
                         <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
                       </linearGradient>
-                      <linearGradient id={`cashGrad-${account.uuid}`} x1="0" y1="0" x2="0" y2="1">
+                      <linearGradient id={`cashGrad-${account.id}`} x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#2563eb" stopOpacity={0.2} />
                         <stop offset="95%" stopColor="#2563eb" stopOpacity={0} />
                       </linearGradient>
@@ -182,7 +182,7 @@ export function AccountHistoryCard({ account, days, dateFormat }: AccountHistory
                       stackId="1"
                       stroke="#8b5cf6"
                       strokeWidth={2}
-                      fill={`url(#secGrad-${account.uuid})`}
+                      fill={`url(#secGrad-${account.id})`}
                       dot={false}
                       isAnimationActive={false}
                     />
@@ -192,7 +192,7 @@ export function AccountHistoryCard({ account, days, dateFormat }: AccountHistory
                       stackId="1"
                       stroke="#2563eb"
                       strokeWidth={2}
-                      fill={`url(#cashGrad-${account.uuid})`}
+                      fill={`url(#cashGrad-${account.id})`}
                       dot={false}
                       isAnimationActive={false}
                     />

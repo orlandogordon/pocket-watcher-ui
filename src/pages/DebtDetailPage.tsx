@@ -47,7 +47,7 @@ export function DebtDetailPage() {
   const { data: payments, isLoading, isError } = useDebtPayments(accountUuid ?? '');
 
   const account = useMemo(
-    () => (accounts ?? []).find((a) => a.uuid === accountUuid),
+    () => (accounts ?? []).find((a) => a.id === accountUuid),
     [accounts, accountUuid],
   );
 
@@ -157,7 +157,7 @@ export function DebtDetailPage() {
               </TableHeader>
               <TableBody>
                 {sortedPayments.map((p) => (
-                  <TableRow key={p.uuid}>
+                  <TableRow key={p.id}>
                     <TableCell className="tabular-nums">
                       {format(parseISO(p.payment_date), 'MMM d, yyyy')}
                     </TableCell>

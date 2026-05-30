@@ -77,10 +77,10 @@ function JobDetailRow({ job }: { job: UploadJob }) {
 }
 
 export function UploadHistoryPage() {
-  const [expandedJobId, setExpandedJobId] = useState<number | null>(null);
+  const [expandedJobId, setExpandedJobId] = useState<string | null>(null);
   const { data: jobs, isLoading, error } = useUploadJobs();
 
-  function toggleExpand(jobId: number) {
+  function toggleExpand(jobId: string) {
     setExpandedJobId((prev) => (prev === jobId ? null : jobId));
   }
 
@@ -121,7 +121,7 @@ export function UploadHistoryPage() {
             <TableHeader>
               <TableRow>
                 <TableHead className="w-10" />
-                <TableHead className="w-16">ID</TableHead>
+                <TableHead className="w-24">ID</TableHead>
                 <TableHead>Institution</TableHead>
                 <TableHead className="w-36">Status</TableHead>
                 <TableHead className="w-44">Created</TableHead>
@@ -131,23 +131,25 @@ export function UploadHistoryPage() {
             </TableHeader>
             <TableBody>
               {jobs.map((job) => (
-                <Fragment key={job.id}>
-                  <TableRow className="cursor-pointer hover:bg-muted/50" onClick={() => toggleExpand(job.id)}>
+                <Fragment key={job.uuid}>
+                  <TableRow className="cursor-pointer hover:bg-muted/50" onClick={() => toggleExpand(job.uuid)}>
                     <TableCell>
                       <Button
                         size="icon"
                         variant="ghost"
                         className="h-7 w-7"
-                        onClick={(e) => { e.stopPropagation(); toggleExpand(job.id); }}
+                        onClick={(e) => { e.stopPropagation(); toggleExpand(job.uuid); }}
                       >
-                        {expandedJobId === job.id ? (
+                        {expandedJobId === job.uuid ? (
                           <ChevronDown className="h-4 w-4" />
                         ) : (
                           <ChevronRight className="h-4 w-4" />
                         )}
                       </Button>
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">#{job.id}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground font-mono" title={job.uuid}>
+                      {job.uuid.slice(0, 8)}
+                    </TableCell>
                     <TableCell className="text-sm">{institutionLabel(job.institution)}</TableCell>
                     <TableCell>{statusBadge(job.status)}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">
@@ -169,7 +171,7 @@ export function UploadHistoryPage() {
                       )}
                     </TableCell>
                   </TableRow>
-                  {expandedJobId === job.id && <JobDetailRow job={job} />}
+                  {expandedJobId === job.uuid && <JobDetailRow job={job} />}
                 </Fragment>
               ))}
             </TableBody>

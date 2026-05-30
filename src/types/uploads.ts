@@ -166,7 +166,7 @@ export interface PreviewSessionInfo {
 export interface ConfirmResponse {
   transactions_created: number;
   investment_transactions_created: number;
-  upload_job_id: number;
+  upload_job_id: string;
   suggestion_accepted?: number;
   suggestion_overridden?: number;
   processing_time_ms?: number;
@@ -175,7 +175,10 @@ export interface ConfirmResponse {
 export type UploadJobStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
 
 export interface UploadJob {
-  id: number;
+  // The list endpoint (GET /uploads/jobs) returns raw ORM objects, so the
+  // public identifier here is `uuid` (the single-job endpoint exposes it as
+  // `id`). See frontend todo #43 / backend #58.
+  uuid: string;
   status: UploadJobStatus;
   institution: string;
   created_at: string;

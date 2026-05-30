@@ -23,7 +23,7 @@ export function DeletePaymentDialog({ open, onOpenChange, payment }: DeletePayme
   function handleDelete() {
     if (!payment) return;
     del.mutate(
-      { uuid: payment.uuid, accountUuid: payment.loan_account_uuid },
+      { uuid: payment.id, accountUuid: payment.loan_account_uuid },
       { onSuccess: () => onOpenChange(false) },
     );
   }

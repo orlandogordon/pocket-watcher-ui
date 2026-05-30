@@ -4,7 +4,7 @@ import { apiFetch } from '@/lib/api';
 // Types
 
 export interface SnapshotJob {
-  id: number;
+  id: string;
   account_uuid: string;
   start_date: string;
   end_date: string;
@@ -21,7 +21,7 @@ export interface SnapshotJob {
 
 export interface RecalculateResponse {
   message: string;
-  job_id: number;
+  job_uuid: string;
   account_uuid: string;
   start_date: string;
   end_date: string;
@@ -35,7 +35,7 @@ export interface SnapshotAllResponse {
 }
 
 export interface NeedsReviewSnapshot {
-  snapshot_uuid: string;
+  id: string;
   account_uuid: string;
   value_date: string;
   balance: string;

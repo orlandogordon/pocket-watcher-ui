@@ -125,7 +125,7 @@ export function UploadForm({ onPreviewReady }: UploadFormProps) {
                   </FormControl>
                   <SelectContent>
                     {(accounts ?? []).map((acc) => (
-                      <SelectItem key={acc.uuid} value={acc.uuid}>
+                      <SelectItem key={acc.id} value={acc.id}>
                         {acc.account_name}
                       </SelectItem>
                     ))}

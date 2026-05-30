@@ -118,7 +118,7 @@ export function AccountsPage() {
                 const isLiability = account.account_type === 'LOAN' || account.account_type === 'CREDIT_CARD';
                 const isNegative = balance < 0 || (isLiability && balance > 0);
                 return (
-                  <TableRow key={account.uuid}>
+                  <TableRow key={account.id}>
                     <TableCell className="font-medium">{account.account_name}</TableCell>
                     <TableCell>
                       <Badge variant="secondary">

@@ -51,7 +51,7 @@ export interface PayoffSchedule {
 }
 
 export interface DebtPaymentResponse {
-  uuid: string;
+  id: string;
   loan_account_uuid: string;
   payment_source_account_uuid: string | null;
   transaction_uuid: string | null;

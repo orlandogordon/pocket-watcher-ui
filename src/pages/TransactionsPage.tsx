@@ -112,7 +112,7 @@ export function TransactionsPage() {
     navigate('/inbox');
   }
 
-  const accountMap = new Map((accounts ?? []).map((a) => [a.uuid, a.account_name]));
+  const accountMap = new Map((accounts ?? []).map((a) => [a.id, a.account_name]));
   const allCategories = categories ?? [];
   const parentCategories = allCategories.filter((c) => !c.parent_category_uuid);
   const subcategoryOptions = allCategories.filter(
@@ -237,7 +237,7 @@ export function TransactionsPage() {
           placeholder="All accounts"
           options={(accounts ?? [])
             .filter((a) => a.account_type !== 'INVESTMENT')
-            .map((a) => ({ value: a.uuid, label: a.account_name }))}
+            .map((a) => ({ value: a.id, label: a.account_name }))}
           value={filters.account_uuid ?? []}
           onChange={(selected) =>
             setFilters((prev) => ({

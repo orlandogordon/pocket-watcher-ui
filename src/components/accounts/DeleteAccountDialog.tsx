@@ -27,7 +27,7 @@ export function DeleteAccountDialog({ open, onOpenChange, account }: DeleteAccou
     if (!account) return;
     setConflictMessage(null);
     deleteAccount.mutate(
-      { uuid: account.uuid, force },
+      { uuid: account.id, force },
       {
         onSuccess: () => onOpenChange(false),
         onError: (err) => {

@@ -74,7 +74,7 @@ function getSalePL(tx: InvestmentTransactionResponse): number {
 export function InvestmentDetailPage() {
   const { accountUuid } = useParams<{ accountUuid: string }>();
   const { data: accounts } = useAccounts();
-  const account = accounts?.find((a) => a.uuid === accountUuid);
+  const account = accounts?.find((a) => a.id === accountUuid);
   const { data: holdings, isLoading: holdingsLoading } = useInvestmentHoldings(accountUuid ?? '');
   const { data: summary } = useInvestmentAccountSummary(accountUuid ?? '');
   const { data: transactions, isLoading: txLoading } = useInvestmentTransactions(accountUuid ?? '');

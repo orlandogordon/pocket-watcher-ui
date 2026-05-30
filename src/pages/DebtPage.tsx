@@ -48,7 +48,7 @@ function overridesToMap(overrides: Overrides): Map<string, Map<string, number>> 
 
 function toDebtInput(a: AccountResponse): DebtAccountInput {
   return {
-    uuid: a.uuid,
+    uuid: a.id,
     name: a.account_name,
     balance: parseFloat(a.balance),
     interestRate: a.interest_rate ? parseFloat(a.interest_rate) * 100 : 0,
@@ -122,13 +122,13 @@ export function DebtPage() {
   // Bump to force recalculation after committing overrides
   const [calcVersion, setCalcVersion] = useState(0);
 
-  const effectiveSelected = selectedUuids ?? new Set(debtAccounts.map((a) => a.uuid));
+  const effectiveSelected = selectedUuids ?? new Set(debtAccounts.map((a) => a.id));
   const budget = parseFloat(budgetInput) || 0;
 
   const selectedInputs = useMemo(
     () =>
       debtAccounts
-        .filter((a) => effectiveSelected.has(a.uuid))
+        .filter((a) => effectiveSelected.has(a.id))
         .map(toDebtInput),
     [debtAccounts, effectiveSelected],
   );
@@ -243,10 +243,10 @@ export function DebtPage() {
               </TableHeader>
               <TableBody>
                 {debtAccounts.map((a) => (
-                  <TableRow key={a.uuid}>
+                  <TableRow key={a.id}>
                     <TableCell className="font-medium">
                       <Link
-                        to={`/debt/${a.uuid}`}
+                        to={`/debt/${a.id}`}
                         className="underline underline-offset-2"
                       >
                         {a.account_name}
@@ -268,7 +268,7 @@ export function DebtPage() {
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => setPaymentDialogUuid(a.uuid)}
+                        onClick={() => setPaymentDialogUuid(a.id)}
                       >
                         <Plus className="h-3.5 w-3.5 mr-1" /> Record Payment
                       </Button>
@@ -357,12 +357,12 @@ export function DebtPage() {
               <div className="flex flex-wrap gap-4">
                 {debtAccounts.map((a) => (
                   <label
-                    key={a.uuid}
+                    key={a.id}
                     className="flex items-center gap-2 text-sm cursor-pointer"
                   >
                     <Checkbox
-                      checked={effectiveSelected.has(a.uuid)}
-                      onCheckedChange={() => toggleAccount(a.uuid)}
+                      checked={effectiveSelected.has(a.id)}
+                      onCheckedChange={() => toggleAccount(a.id)}
                     />
                     <span>{a.account_name}</span>
                     <span className="text-muted-foreground tabular-nums">

@@ -13,8 +13,8 @@ export const uploadKeys = {
   sessions: () => ['uploads', 'sessions'] as const,
   preview: (id: string) => ['uploads', 'preview', id] as const,
   jobs: () => ['uploads', 'jobs'] as const,
-  job: (id: number) => ['uploads', 'jobs', id] as const,
-  jobSkipped: (id: number) => ['uploads', 'jobs', id, 'skipped'] as const,
+  job: (id: string) => ['uploads', 'jobs', id] as const,
+  jobSkipped: (id: string) => ['uploads', 'jobs', id, 'skipped'] as const,
 };
 
 export function usePreviewSessions() {
@@ -167,9 +167,9 @@ export function useUploadJobs() {
   });
 }
 
-export function useJobSkipped(jobId: number | null) {
+export function useJobSkipped(jobId: string | null) {
   return useQuery({
-    queryKey: uploadKeys.jobSkipped(jobId ?? 0),
+    queryKey: uploadKeys.jobSkipped(jobId ?? ''),
     queryFn: () =>
       apiFetch<{ items: SkippedItem[] }>(`/uploads/jobs/${jobId}/skipped`).then(
         (r) => r.items,

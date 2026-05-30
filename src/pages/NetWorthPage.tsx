@@ -231,7 +231,7 @@ export function NetWorthPage() {
           <div className="grid grid-cols-2 gap-4">
             {accounts.map((account) => (
               <AccountHistoryCard
-                key={account.uuid}
+                key={account.id}
                 account={account}
                 days={days}
                 dateFormat={dateFormat}

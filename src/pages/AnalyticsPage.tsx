@@ -131,7 +131,7 @@ export function AnalyticsPage() {
   const accountOptions = useMemo(
     () =>
       (accounts ?? []).map((a) => ({
-        value: a.uuid,
+        value: a.id,
         label: `${a.account_name} (${a.institution_name})`,
       })),
     [accounts],

@@ -6,8 +6,8 @@ import { formatCurrency } from '@/lib/format';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
-function AccountCard({ account }: { account: { uuid: string; account_name: string; institution_name: string; balance: string } }) {
-  const { data: holdings } = useInvestmentHoldings(account.uuid);
+function AccountCard({ account }: { account: { id: string; account_name: string; institution_name: string; balance: string } }) {
+  const { data: holdings } = useInvestmentHoldings(account.id);
 
   const totalMarketValue = (holdings ?? []).reduce((sum, h) => {
     const price = h.current_price != null ? parseFloat(h.current_price) : NaN;
@@ -23,7 +23,7 @@ function AccountCard({ account }: { account: { uuid: string; account_name: strin
   const unrealizedPL = totalMarketValue - totalCostBasis;
 
   return (
-    <Link to={`/investments/${account.uuid}`}>
+    <Link to={`/investments/${account.id}`}>
       <Card className="hover:bg-accent/50 transition-colors cursor-pointer">
         <CardHeader className="pb-2">
           <CardTitle className="text-base">{account.account_name}</CardTitle>
@@ -119,7 +119,7 @@ export function InvestmentsPage() {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {investmentAccounts.map((account) => (
-            <AccountCard key={account.uuid} account={account} />
+            <AccountCard key={account.id} account={account} />
           ))}
         </div>
       )}

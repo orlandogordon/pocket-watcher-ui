@@ -134,7 +134,7 @@ const payload: AccountCreate = {
     };
 
     if (isEdit && account) {
-      update.mutate({ uuid: account.uuid, data: payload }, {
+      update.mutate({ uuid: account.id, data: payload }, {
         onSuccess: () => onOpenChange(false),
       });
     } else {

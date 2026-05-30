@@ -185,7 +185,7 @@ export function TransactionFormDialog({
                         {(accounts ?? [])
                           .filter((a) => a.account_type !== 'INVESTMENT')
                           .map((a) => (
-                            <SelectItem key={a.uuid} value={a.uuid}>
+                            <SelectItem key={a.id} value={a.id}>
                               {a.account_name}
                             </SelectItem>
                           ))}
