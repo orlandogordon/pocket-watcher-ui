@@ -5,6 +5,8 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { SignInPage } from '@/pages/SignInPage';
 import { DashboardPage } from '@/pages/DashboardPage';
 import { AccountsPage } from '@/pages/AccountsPage';
+import { AccountDetailPage } from '@/pages/AccountDetailPage';
+import { OnboardingPage } from '@/pages/OnboardingPage';
 import { TransactionsPage } from '@/pages/TransactionsPage';
 import { InboxPage } from '@/pages/InboxPage';
 import { TagsPage } from '@/pages/TagsPage';
@@ -29,9 +31,11 @@ export default function App() {
         <Routes>
           <Route path="/sign-in" element={<SignInPage />} />
           <Route element={<RequireAuth />}>
+            <Route path="onboarding" element={<OnboardingPage />} />
             <Route element={<AppLayout />}>
               <Route index element={<DashboardPage />} />
               <Route path="accounts" element={<AccountsPage />} />
+              <Route path="accounts/:id" element={<AccountDetailPage />} />
               <Route path="transactions" element={<TransactionsPage />} />
               <Route path="inbox" element={<InboxPage />} />
               <Route path="tags" element={<TagsPage />} />

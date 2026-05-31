@@ -2,16 +2,27 @@ import type { TierASuggestion } from './transfers';
 
 export type { TierASuggestion };
 
-export const INSTITUTIONS = ['tdbank', 'amex', 'amzn-synchrony', 'schwab', 'tdameritrade', 'ameriprise'] as const;
+export const INSTITUTIONS = [
+  'amex',
+  'tdbank',
+  'amzn-synchrony',
+  'schwab',
+  'tdameritrade',
+  'ameriprise',
+  'venmo',
+  'cashapp',
+] as const;
 export type Institution = typeof INSTITUTIONS[number];
 
 export const INSTITUTION_LABELS: Record<Institution, string> = {
-  tdbank: 'TD Bank',
   amex: 'American Express',
+  tdbank: 'TD Bank',
   'amzn-synchrony': 'Amazon Synchrony',
   schwab: 'Charles Schwab',
   tdameritrade: 'TD Ameritrade',
   ameriprise: 'Ameriprise',
+  venmo: 'Venmo',
+  cashapp: 'Cash App',
 };
 
 export interface ParsedData {
@@ -203,4 +214,102 @@ export interface SkippedItem {
     symbol?: string;
     quantity?: string;
   };
+}
+
+// ── Bulk upload (frontend todo #42 / backend #59) ──────────────────────────
+
+/** POST /uploads/files → 201 */
+export interface FileUploadResponse {
+  document_uuid: string;
+  filename: string;
+  size: number;
+}
+
+/** POST /uploads/bulk → 202 */
+export interface BulkKickoffResponse {
+  batch_uuid: string;
+  total_files: number;
+}
+
+export type BatchStatus =
+  | 'PENDING'
+  | 'IN_PROGRESS'
+  | 'COMPLETED'
+  | 'FAILED'
+  | 'CANCELLED';
+
+export const BATCH_TERMINAL: BatchStatus[] = ['COMPLETED', 'FAILED', 'CANCELLED'];
+
+export type PerFileStatus =
+  | 'PENDING'
+  | 'PROCESSING'
+  | 'COMPLETED'
+  | 'FAILED'
+  | 'SKIPPED';
+
+export interface PerFileResult {
+  document_uuid: string;
+  filename: string;
+  status: PerFileStatus;
+  transactions_created: number;
+  transactions_skipped: number;
+  investment_transactions_created: number;
+  investment_transactions_skipped: number;
+  error_message: string | null;
+}
+
+/** GET /uploads/bulk/{batch_uuid} → 200 */
+export interface BulkBatchStatus {
+  batch_uuid: string;
+  status: BatchStatus;
+  total: number;
+  processed: number;
+  current_filename: string | null;
+  created: number;
+  skipped: number;
+  needs_review: number;
+  per_file: PerFileResult[];
+  created_at: string;
+  completed_at: string | null;
+}
+
+/** GET /uploads/bulk?skip&limit → batches[] */
+export interface BatchListItem {
+  batch_uuid: string;
+  status: BatchStatus;
+  total: number;
+  processed: number;
+  created_at: string;
+  completed_at: string | null;
+}
+
+/** DELETE /uploads/bulk/{batch_uuid} → 200 */
+export interface CancelBatchResponse {
+  batch_uuid: string;
+  status: BatchStatus;
+}
+
+// ── Document browser ───────────────────────────────────────────────────────
+
+export type DocumentStatus =
+  | 'UPLOADED'
+  | 'PENDING'
+  | 'PROCESSING'
+  | 'COMPLETED'
+  | 'FAILED';
+
+/** GET /uploads/documents[/{uuid}] */
+export interface DocumentResponse {
+  document_uuid: string;
+  filename: string;
+  institution: string;
+  status: DocumentStatus;
+  account_uuid: string;
+  transactions_created: number;
+  transactions_skipped: number;
+  investment_transactions_created: number;
+  investment_transactions_skipped: number;
+  file_size: number;
+  content_type: string;
+  created_at: string;
 }

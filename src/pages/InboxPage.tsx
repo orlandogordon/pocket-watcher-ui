@@ -383,7 +383,7 @@ export function InboxPage() {
             <div className="w-16">Severity</div>
             {tab === 'all' && <div className="w-28">Kind</div>}
             <div className="w-24">Date</div>
-            <div className="flex-1 min-w-0">Description</div>
+            <div className="flex-1 min-w-[180px] truncate">Description</div>
             <div className="w-36">Merchant</div>
             <div className="w-32">Account</div>
             {showCategoryComments && <div className="w-40">Category</div>}
@@ -454,7 +454,7 @@ export function InboxPage() {
                     <div className="w-24 text-muted-foreground text-xs whitespace-nowrap">
                       {date ? format(parseISO(date), 'MMM d, yyyy') : '—'}
                     </div>
-                    <div className="flex-1 min-w-0 truncate" title={desc}>
+                    <div className="flex-1 min-w-[180px] truncate" title={desc}>
                       {desc}
                       {item.confidence && (
                         <span className="ml-2 inline-block align-middle">

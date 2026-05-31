@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAccounts, useAccountStats } from '@/hooks/useAccounts';
 import { formatCurrency } from '@/lib/format';
 import { AccountFormDialog } from '@/components/accounts/AccountFormDialog';
@@ -14,7 +15,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Pencil, Trash2, Plus } from 'lucide-react';
+import { Pencil, Trash2, Plus, Upload } from 'lucide-react';
 import type { AccountResponse } from '@/types/accounts';
 
 const TYPE_LABELS: Record<string, string> = {
@@ -83,10 +84,18 @@ export function AccountsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">Accounts</h1>
-        <Button size="sm" onClick={openCreate}>
-          <Plus className="mr-1 h-4 w-4" />
-          Add Account
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" asChild>
+            <Link to="/onboarding">
+              <Upload className="mr-1 h-4 w-4" />
+              Import Statements
+            </Link>
+          </Button>
+          <Button size="sm" onClick={openCreate}>
+            <Plus className="mr-1 h-4 w-4" />
+            Add Account
+          </Button>
+        </div>
       </div>
 
       {/* Table */}
@@ -119,7 +128,14 @@ export function AccountsPage() {
                 const isNegative = balance < 0 || (isLiability && balance > 0);
                 return (
                   <TableRow key={account.id}>
-                    <TableCell className="font-medium">{account.account_name}</TableCell>
+                    <TableCell className="font-medium">
+                      <Link
+                        to={`/accounts/${account.id}`}
+                        className="hover:underline"
+                      >
+                        {account.account_name}
+                      </Link>
+                    </TableCell>
                     <TableCell>
                       <Badge variant="secondary">
                         {TYPE_LABELS[account.account_type] ?? account.account_type}

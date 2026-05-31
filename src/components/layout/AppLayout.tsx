@@ -1,4 +1,5 @@
-import { NavLink, Outlet } from 'react-router-dom';
+import { useEffect } from 'react';
+import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import {
   LayoutDashboard,
@@ -21,6 +22,7 @@ import {
 } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAccounts } from '@/hooks/useAccounts';
 import { useAttentionCount } from '@/hooks/useDataHealth';
 import { Button } from '@/components/ui/button';
 
@@ -102,6 +104,21 @@ const themeLabel = { system: 'System', light: 'Light', dark: 'Dark' } as const;
 export function AppLayout() {
   const { theme, setTheme } = useTheme();
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const { data: accounts, isSuccess } = useAccounts();
+
+  // New users land in the onboarding wizard the first time they have no
+  // accounts — unless they chose "Skip for now" this session.
+  useEffect(() => {
+    if (
+      isSuccess &&
+      accounts &&
+      accounts.length === 0 &&
+      !sessionStorage.getItem('pw_onboarding_skipped')
+    ) {
+      navigate('/onboarding', { replace: true });
+    }
+  }, [isSuccess, accounts, navigate]);
 
   function cycleTheme() {
     const idx = themeOrder.indexOf(theme);

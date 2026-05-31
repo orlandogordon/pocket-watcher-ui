@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { CheckCircle2, History, Upload, X } from 'lucide-react';
+import { CheckCircle2, History, Upload, X, Layers } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { UploadForm } from '@/components/uploads/UploadForm';
@@ -155,12 +155,20 @@ export function UploadsPage() {
             Import bank and brokerage statements.
           </p>
         </div>
-        <Button size="sm" variant="outline" asChild>
-          <Link to="/uploads/history">
-            <History className="mr-1 h-4 w-4" />
-            History
-          </Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" asChild>
+            <Link to="/onboarding">
+              <Layers className="mr-1 h-4 w-4" />
+              Bulk import
+            </Link>
+          </Button>
+          <Button size="sm" variant="outline" asChild>
+            <Link to="/uploads/history">
+              <History className="mr-1 h-4 w-4" />
+              History
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {step.kind === 'form' && (
