@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FileText, Trash2, Eye } from 'lucide-react';
+import { FileText, Trash2, Eye, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -79,6 +79,11 @@ export function DocumentsList({ accountUuid }: DocumentsListProps) {
                     >
                       <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
                       <span className="max-w-[18rem] truncate">{doc.filename}</span>
+                      {doc.llm_degraded && (
+                        <span title="Imported without AI enrichment">
+                          <Sparkles className="h-3.5 w-3.5 shrink-0 text-orange-500" />
+                        </span>
+                      )}
                     </button>
                   </TableCell>
                   <TableCell>

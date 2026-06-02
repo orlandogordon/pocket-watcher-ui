@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { UploadForm } from '@/components/uploads/UploadForm';
 import { PreviewSession } from '@/components/uploads/PreviewSession';
+import { LlmStatusPill } from '@/components/uploads/LlmStatusPill';
 import { usePreviewSessions, useCancelSession } from '@/hooks/useStatementUpload';
 import { INSTITUTION_LABELS } from '@/types/uploads';
 import type { ConfirmResponse, PreviewResponse, Institution } from '@/types/uploads';
@@ -173,6 +174,9 @@ export function UploadsPage() {
 
       {step.kind === 'form' && (
         <>
+          <div className="mb-4">
+            <LlmStatusPill />
+          </div>
           <ActiveSessions onResume={(id) => setStep({ kind: 'preview', sessionId: id })} />
           <UploadForm onPreviewReady={handlePreviewReady} />
         </>

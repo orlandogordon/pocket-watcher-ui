@@ -15,6 +15,7 @@ import {
 } from '@/hooks/useStatementUpload';
 import { ReadyToImportTable } from './ReadyToImportTable';
 import { RejectedTable } from './RejectedTable';
+import { LlmDegradedBanner } from './LlmDegradedBanner';
 import type { ConfirmResponse } from '@/types/uploads';
 import type { RowEdits } from './upload-utils';
 
@@ -175,13 +176,8 @@ export function PreviewSession({ sessionId, onCancel, onConfirmed }: PreviewSess
       )}
 
       {/* LLM degraded banner */}
-      {preview.llm_summary?.degraded && (
-        <div className="flex items-center gap-2 rounded-md border border-orange-200 bg-orange-50 px-4 py-2 text-sm text-orange-700">
-          <Sparkles className="h-4 w-4" />
-          <span>
-            AI suggestions unavailable for this import — merchants and categories may need manual review.
-          </span>
-        </div>
+      {(preview.llm_degraded || preview.llm_summary?.degraded) && (
+        <LlmDegradedBanner />
       )}
 
       {/* TTL warning banner */}

@@ -158,6 +158,8 @@ export interface PreviewResponse {
     investment_transactions: PreviewItem[];
   } | null;
   llm_summary?: LLMSummary | null;
+  // Canonical top-level flag (backend #60); mirrors llm_summary.degraded.
+  llm_degraded?: boolean;
 }
 
 export interface BulkActionResponse extends PreviewResponse {
@@ -181,6 +183,7 @@ export interface ConfirmResponse {
   suggestion_accepted?: number;
   suggestion_overridden?: number;
   processing_time_ms?: number;
+  llm_degraded?: boolean;
 }
 
 export type UploadJobStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
@@ -200,6 +203,7 @@ export interface UploadJob {
   investment_transactions_skipped?: number;
   file_path?: string;
   error_message?: string;
+  llm_degraded?: boolean;
 }
 
 export interface SkippedItem {
@@ -256,6 +260,8 @@ export interface PerFileResult {
   investment_transactions_created: number;
   investment_transactions_skipped: number;
   error_message: string | null;
+  // True if this file imported with the LLM offline → rows un-enriched (#60).
+  llm_degraded: boolean;
 }
 
 /** GET /uploads/bulk/{batch_uuid} → 200 */
@@ -271,6 +277,8 @@ export interface BulkBatchStatus {
   per_file: PerFileResult[];
   created_at: string;
   completed_at: string | null;
+  // True if any file in the batch degraded (LLM unreachable) (#60).
+  llm_degraded: boolean;
 }
 
 /** GET /uploads/bulk?skip&limit → batches[] */
@@ -312,4 +320,15 @@ export interface DocumentResponse {
   file_size: number;
   content_type: string;
   created_at: string;
+  // True if this document imported with the LLM offline (#60).
+  llm_degraded: boolean;
+}
+
+// ── LLM health (frontend todo #44 / backend #60) ───────────────────────────
+
+/** GET /health/llm → 200 (always 200; "offline" is a normal answer). */
+export interface LlmHealth {
+  online: boolean;
+  model: string | null;
+  checked_at: string;
 }

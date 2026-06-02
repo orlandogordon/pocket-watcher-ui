@@ -6,6 +6,7 @@ import {
   XCircle,
   Inbox,
   RotateCw,
+  Sparkles,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -18,6 +19,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { useBulkBatch, useCancelBatch } from '@/hooks/useBulkUpload';
+import { LlmDegradedBanner } from '@/components/uploads/LlmDegradedBanner';
 import { BATCH_TERMINAL, type PerFileStatus } from '@/types/uploads';
 
 const FILE_STATUS_VARIANT: Record<
@@ -57,6 +59,7 @@ export function BatchProgress({
   const terminal = BATCH_TERMINAL.includes(batch.status);
   const pct = batch.total > 0 ? Math.round((batch.processed / batch.total) * 100) : 0;
   const failedFiles = batch.per_file.filter((f) => f.status === 'FAILED');
+  const degradedCount = batch.per_file.filter((f) => f.llm_degraded).length;
 
   return (
     <div className="space-y-5">
@@ -109,6 +112,20 @@ export function BatchProgress({
         </div>
       )}
 
+      {batch.llm_degraded && (
+        <LlmDegradedBanner>
+          AI suggestions were unavailable for{' '}
+          {degradedCount > 0
+            ? `${degradedCount} statement${degradedCount === 1 ? '' : 's'}`
+            : 'some statements'}{' '}
+          — those merchants and categories need manual review in the{' '}
+          <Link to="/inbox" className="font-medium underline">
+            Needs Review inbox
+          </Link>
+          .
+        </LlmDegradedBanner>
+      )}
+
       <div className="rounded-md border">
         <Table>
           <TableHeader>
@@ -129,7 +146,14 @@ export function BatchProgress({
               return (
                 <TableRow key={f.document_uuid}>
                   <TableCell className="font-medium">
-                    <span className="block max-w-[22rem] truncate">{f.filename}</span>
+                    <span className="flex max-w-[22rem] items-center gap-1.5">
+                      <span className="truncate">{f.filename}</span>
+                      {f.llm_degraded && (
+                        <span title="Imported without AI enrichment">
+                          <Sparkles className="h-3.5 w-3.5 shrink-0 text-orange-500" />
+                        </span>
+                      )}
+                    </span>
                     {f.error_message && (
                       <span className="text-xs text-destructive">{f.error_message}</span>
                     )}

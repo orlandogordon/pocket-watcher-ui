@@ -16,6 +16,7 @@ import { AccountDropzone } from '@/components/bulk-uploads/AccountDropzone';
 import { FileUploadRow } from '@/components/bulk-uploads/FileUploadRow';
 import { BatchProgress } from '@/components/bulk-uploads/BatchProgress';
 import { useUploadQueue } from '@/components/bulk-uploads/useUploadQueue';
+import { LlmStatusPill } from '@/components/uploads/LlmStatusPill';
 import { useAccounts } from '@/hooks/useAccounts';
 import { useBulkKickoff } from '@/hooks/useBulkUpload';
 import { INSTITUTIONS, INSTITUTION_LABELS, type Institution } from '@/types/uploads';
@@ -212,6 +213,7 @@ export function OnboardingPage() {
       {/* Step: files */}
       {step === 'files' && (
         <div className="space-y-4">
+          <LlmStatusPill />
           {accountList.map((acc) => {
             const accGroups = groupsFor(acc.id);
             return (
