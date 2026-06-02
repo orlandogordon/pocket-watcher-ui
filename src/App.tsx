@@ -1,6 +1,7 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { RequireAuth } from '@/components/layout/RequireAuth';
+import { RequireAdmin } from '@/components/layout/RequireAdmin';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { SignInPage } from '@/pages/SignInPage';
 import { DashboardPage } from '@/pages/DashboardPage';
@@ -51,7 +52,9 @@ export default function App() {
               <Route path="plans/:uuid" element={<PlanDetailPage />} />
               <Route path="net-worth" element={<NetWorthPage />} />
               <Route path="analytics" element={<AnalyticsPage />} />
-              <Route path="admin" element={<AdminPage />} />
+              <Route element={<RequireAdmin />}>
+                <Route path="admin" element={<AdminPage />} />
+              </Route>
             </Route>
           </Route>
         </Routes>

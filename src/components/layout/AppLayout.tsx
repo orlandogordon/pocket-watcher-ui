@@ -42,7 +42,7 @@ const primaryNav = [
 
 const utilityNav = [
   { to: '/tags', label: 'Tags', icon: Tag },
-  { to: '/admin', label: 'Admin', icon: Settings },
+  { to: '/admin', label: 'Admin', icon: Settings, adminOnly: true },
 ];
 
 function AttentionBadge() {
@@ -139,9 +139,11 @@ export function AppLayout() {
           ))}
         </nav>
         <div className="border-t p-3 flex flex-col gap-1">
-          {utilityNav.map((item) => (
-            <NavItem key={item.to} {...item} />
-          ))}
+          {utilityNav
+            .filter((item) => !item.adminOnly || user?.is_admin)
+            .map((item) => (
+              <NavItem key={item.to} {...item} />
+            ))}
           <div className="mt-1 flex items-center gap-2 px-3">
             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={cycleTheme}>
               <ThemeIcon className="h-4 w-4" />

@@ -51,6 +51,7 @@ import {
 } from '@/components/ui/table';
 import { Camera, RefreshCw, AlertTriangle, CheckCircle, Pencil } from 'lucide-react';
 import type { AccountResponse } from '@/types/accounts';
+import { CreateUserForm } from '@/components/admin/CreateUserForm';
 
 // --- Snapshot Actions Section ---
 
@@ -327,7 +328,7 @@ function SnapshotEditDialog({
     if (!snapshot) return;
     const initial: Record<string, string> = {};
     for (const f of SNAPSHOT_EDIT_FIELDS) {
-      const val = (snapshot as Record<string, unknown>)[f.key];
+      const val = (snapshot as unknown as Record<string, unknown>)[f.key];
       initial[f.key] = val != null ? String(val) : '';
     }
     setValues(initial);
@@ -338,7 +339,7 @@ function SnapshotEditDialog({
     if (!snapshot) return;
     const data: Record<string, string | boolean> = {};
     for (const f of SNAPSHOT_EDIT_FIELDS) {
-      const original = (snapshot as Record<string, unknown>)[f.key];
+      const original = (snapshot as unknown as Record<string, unknown>)[f.key];
       const originalStr = original != null ? String(original) : '';
       if (values[f.key] !== originalStr && values[f.key] !== '') {
         data[f.key] = values[f.key];
@@ -356,7 +357,7 @@ function SnapshotEditDialog({
   const hasChanges = (() => {
     if (!snapshot) return false;
     for (const f of SNAPSHOT_EDIT_FIELDS) {
-      const original = (snapshot as Record<string, unknown>)[f.key];
+      const original = (snapshot as unknown as Record<string, unknown>)[f.key];
       const originalStr = original != null ? String(original) : '';
       if (values[f.key] !== originalStr && values[f.key] !== '') return true;
     }
@@ -597,6 +598,14 @@ export function AdminPage() {
   return (
     <div className="p-6 space-y-6 max-w-5xl">
       <h1 className="text-2xl font-bold tracking-tight">Admin</h1>
+      <Card>
+        <CardHeader>
+          <CardTitle>Create User</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <CreateUserForm />
+        </CardContent>
+      </Card>
       <SnapshotActionsSection accounts={allAccounts} />
       <RecentJobsSection accounts={allAccounts} />
       <NeedsReviewSection investmentAccounts={investmentAccounts} />

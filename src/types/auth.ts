@@ -19,4 +19,5 @@ export interface UserResponse {
   last_login_at: string | null;
   created_at: string;
   updated_at: string;
+  is_admin: boolean;
 }
