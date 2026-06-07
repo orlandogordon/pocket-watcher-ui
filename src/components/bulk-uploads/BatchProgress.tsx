@@ -37,12 +37,16 @@ interface BatchProgressProps {
   batchUuid: string;
   onRetryFailed?: (failedDocumentUuids: string[]) => void;
   onDone?: () => void;
+  /** When provided, a terminal batch offers a "Start new import" action that
+   *  resets the flow. Used when resuming a recently-finished batch on return. */
+  onStartNew?: () => void;
 }
 
 export function BatchProgress({
   batchUuid,
   onRetryFailed,
   onDone,
+  onStartNew,
 }: BatchProgressProps) {
   const { data: batch, isLoading } = useBulkBatch(batchUuid);
   const cancel = useCancelBatch();
@@ -206,6 +210,12 @@ export function BatchProgress({
               >
                 <RotateCw className="mr-2 h-4 w-4" />
                 Retry {failedFiles.length} failed
+              </Button>
+            )}
+            {onStartNew && (
+              <Button variant="outline" onClick={onStartNew}>
+                <RotateCw className="mr-2 h-4 w-4" />
+                Start new import
               </Button>
             )}
             {onDone && (

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, ArrowRight, ArrowLeft, Wallet, Loader2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -18,10 +18,20 @@ import { BatchProgress } from '@/components/bulk-uploads/BatchProgress';
 import { useUploadQueue } from '@/components/bulk-uploads/useUploadQueue';
 import { LlmStatusPill } from '@/components/uploads/LlmStatusPill';
 import { useAccounts } from '@/hooks/useAccounts';
-import { useBulkKickoff } from '@/hooks/useBulkUpload';
-import { INSTITUTIONS, INSTITUTION_LABELS, type Institution } from '@/types/uploads';
+import { useBulkKickoff, useBulkBatches } from '@/hooks/useBulkUpload';
+import {
+  BATCH_TERMINAL,
+  INSTITUTIONS,
+  INSTITUTION_LABELS,
+  type Institution,
+} from '@/types/uploads';
 
 type Step = 'accounts' | 'files' | 'processing';
+
+// On return to the page, reattach to the newest batch if it's still running, or
+// show its summary if it finished within this window (covers "it completed while
+// I was away"). Older terminal batches just fall through to the start screen.
+const RESUME_WINDOW_MS = 10 * 60 * 1000;
 
 const STEPS: { key: Step; label: string }[] = [
   { key: 'accounts', label: 'Accounts' },
@@ -47,11 +57,33 @@ export function OnboardingPage() {
   const { data: accounts, isLoading } = useAccounts();
   const queue = useUploadQueue();
   const kickoff = useBulkKickoff();
+  // Newest batch only — used to reattach a live/recent import on mount.
+  const { data: recentBatches } = useBulkBatches({ limit: 1 });
 
   const [step, setStep] = useState<Step>('accounts');
   const [formOpen, setFormOpen] = useState(false);
   const [groups, setGroups] = useState<Record<string, FormatGroup[]>>({});
   const [batchUuid, setBatchUuid] = useState<string | null>(null);
+
+  // Reattach to an in-flight (or just-finished) batch when the page loads, so
+  // leaving and returning during an import doesn't reset to the start screen.
+  // Runs once, after the batch list first resolves.
+  const resumeResolved = useRef(false);
+  useEffect(() => {
+    if (resumeResolved.current || !recentBatches) return;
+    resumeResolved.current = true;
+    const latest = recentBatches[0];
+    if (!latest) return;
+    const nonTerminal = !BATCH_TERMINAL.includes(latest.status);
+    const recentTerminal =
+      !nonTerminal &&
+      latest.completed_at != null &&
+      Date.now() - new Date(latest.completed_at).getTime() < RESUME_WINDOW_MS;
+    if (nonTerminal || recentTerminal) {
+      setBatchUuid(latest.batch_uuid);
+      setStep('processing');
+    }
+  }, [recentBatches]);
 
   const groupsFor = (accountId: string): FormatGroup[] =>
     groups[accountId] ?? [{ id: `${accountId}-0`, institution: '' }];
@@ -106,6 +138,14 @@ export function OnboardingPage() {
   function handleRetryFailed(failedDocumentUuids: string[]) {
     if (failedDocumentUuids.length === 0) return;
     void startImport(failedDocumentUuids);
+  }
+
+  // Drop a resumed/finished batch and go back to a clean start.
+  function handleStartNew() {
+    queue.reset();
+    setGroups({});
+    setBatchUuid(null);
+    setStep('accounts');
   }
 
   const stepIndex = STEPS.findIndex((s) => s.key === step);
@@ -348,6 +388,7 @@ export function OnboardingPage() {
             <BatchProgress
               batchUuid={batchUuid}
               onRetryFailed={handleRetryFailed}
+              onStartNew={handleStartNew}
               onDone={() => navigate('/transactions')}
             />
           </CardContent>
