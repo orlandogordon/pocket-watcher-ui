@@ -186,7 +186,12 @@ export interface ConfirmResponse {
   llm_degraded?: boolean;
 }
 
-export type UploadJobStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
+export type UploadJobStatus =
+  | 'PENDING'
+  | 'PROCESSING'
+  | 'COMPLETED'
+  | 'FAILED'
+  | 'CANCELLED';
 
 export interface UploadJob {
   // The list endpoint (GET /uploads/jobs) returns raw ORM objects, so the
@@ -249,7 +254,8 @@ export type PerFileStatus =
   | 'PROCESSING'
   | 'COMPLETED'
   | 'FAILED'
-  | 'SKIPPED';
+  | 'SKIPPED'
+  | 'CANCELLED';
 
 export interface PerFileResult {
   document_uuid: string;

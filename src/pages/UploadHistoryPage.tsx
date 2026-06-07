@@ -29,6 +29,12 @@ function statusBadge(status: UploadJobStatus) {
       );
     case 'FAILED':
       return <Badge variant="destructive">{status}</Badge>;
+    case 'CANCELLED':
+      return (
+        <Badge variant="outline" className="text-amber-700 border-amber-400">
+          {status}
+        </Badge>
+      );
   }
 }
 

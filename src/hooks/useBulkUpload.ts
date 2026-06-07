@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch, apiFetchBlob, apiUploadWithProgress } from '@/lib/api';
 import { uploadKeys } from './useStatementUpload';
@@ -48,7 +49,8 @@ export function useBulkKickoff() {
 
 /** GET /uploads/bulk/{batch_uuid} — polls until the batch reaches a terminal state. */
 export function useBulkBatch(batchUuid: string | null) {
-  return useQuery({
+  const qc = useQueryClient();
+  const query = useQuery({
     queryKey: bulkKeys.batch(batchUuid ?? ''),
     queryFn: () => apiFetch<BulkBatchStatus>(`/uploads/bulk/${batchUuid}`),
     enabled: !!batchUuid,
@@ -58,6 +60,27 @@ export function useBulkBatch(batchUuid: string | null) {
     },
     refetchOnWindowFocus: false,
   });
+
+  // The poll is the only place batch completion/cancellation is observed (there
+  // is no mutation to hang onSuccess on for completion). When it reaches a
+  // terminal state the per-statement jobs and documents have settled to their
+  // final statuses, so refresh those lists once — the fetch-once history and
+  // document-browser views otherwise show stale statuses until a manual reload.
+  const status = query.data?.status;
+  const settledRef = useRef(false);
+  useEffect(() => {
+    if (!status) return;
+    if (!BATCH_TERMINAL.includes(status)) {
+      settledRef.current = false;
+      return;
+    }
+    if (settledRef.current) return;
+    settledRef.current = true;
+    qc.invalidateQueries({ queryKey: uploadKeys.jobs() });
+    qc.invalidateQueries({ queryKey: ['uploads', 'documents'] });
+  }, [status, qc]);
+
+  return query;
 }
 
 /** GET /uploads/bulk?skip&limit — batch history. */
@@ -86,6 +109,11 @@ export function useCancelBatch() {
     onSuccess: (_data, batchUuid) => {
       qc.invalidateQueries({ queryKey: bulkKeys.batch(batchUuid) });
       qc.invalidateQueries({ queryKey: bulkKeys.batches() });
+      // The cancel cascades to the per-statement jobs/documents (now CANCELLED),
+      // so the fetch-once Upload History and document-browser lists must refresh
+      // if they're open rather than showing stale statuses until a reload.
+      qc.invalidateQueries({ queryKey: uploadKeys.jobs() });
+      qc.invalidateQueries({ queryKey: ['uploads', 'documents'] });
     },
   });
 }

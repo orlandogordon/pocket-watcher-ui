@@ -31,6 +31,7 @@ const FILE_STATUS_VARIANT: Record<
   COMPLETED: { label: 'Imported', cls: 'bg-green-100 text-green-700' },
   SKIPPED: { label: 'Skipped', cls: 'bg-amber-100 text-amber-700' },
   FAILED: { label: 'Failed', cls: 'bg-red-100 text-red-700' },
+  CANCELLED: { label: 'Canceled', cls: 'bg-amber-100 text-amber-700' },
 };
 
 interface BatchProgressProps {
