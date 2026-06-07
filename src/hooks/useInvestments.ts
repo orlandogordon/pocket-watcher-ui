@@ -29,13 +29,28 @@ export function useInvestmentAccountSummary(accountUuid: string) {
   });
 }
 
+// The list endpoint defaults to limit=100 and the detail page does all of its
+// filtering/sorting/paging client-side, so we fetch the full history here by
+// walking pages until a short one comes back. Page size matches the backend's
+// known-honored default (avoids tripping any `le` cap on `limit`); the render
+// itself stays paginated, so the full array never hits the DOM at once.
+const INVESTMENT_TX_PAGE_SIZE = 100;
+
 export function useInvestmentTransactions(accountUuid: string) {
   return useQuery({
     queryKey: ['investments', 'transactions', accountUuid],
-    queryFn: () =>
-      apiFetch<InvestmentTransactionResponse[]>(
-        `/investments/accounts/${accountUuid}/transactions/`,
-      ),
+    queryFn: async () => {
+      const byId = new Map<string, InvestmentTransactionResponse>();
+      for (let skip = 0; ; skip += INVESTMENT_TX_PAGE_SIZE) {
+        const page = await apiFetch<InvestmentTransactionResponse[]>(
+          `/investments/accounts/${accountUuid}/transactions/?skip=${skip}&limit=${INVESTMENT_TX_PAGE_SIZE}`,
+        );
+        // Dedupe by id in case OFFSET paging overlaps under unstable ordering.
+        for (const tx of page) byId.set(tx.id, tx);
+        if (page.length < INVESTMENT_TX_PAGE_SIZE) break;
+      }
+      return [...byId.values()];
+    },
     enabled: !!accountUuid,
   });
 }
