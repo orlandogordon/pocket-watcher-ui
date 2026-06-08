@@ -137,7 +137,9 @@ export function OnboardingPage() {
 
   function handleRetryFailed(failedDocumentUuids: string[]) {
     if (failedDocumentUuids.length === 0) return;
-    void startImport(failedDocumentUuids);
+    // Error is surfaced via kickoff.error in the processing step; swallow the
+    // rejection so it doesn't bubble as an unhandled promise rejection.
+    void startImport(failedDocumentUuids).catch(() => {});
   }
 
   // Drop a resumed/finished batch and go back to a clean start.
@@ -391,6 +393,11 @@ export function OnboardingPage() {
               onStartNew={handleStartNew}
               onDone={() => navigate('/transactions')}
             />
+            {kickoff.error && (
+              <p className="mt-3 text-sm text-destructive">
+                Retry failed: {kickoff.error.message}
+              </p>
+            )}
           </CardContent>
         </Card>
       )}

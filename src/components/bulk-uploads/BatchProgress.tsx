@@ -151,7 +151,7 @@ export function BatchProgress({
               return (
                 <TableRow key={f.document_uuid}>
                   <TableCell className="font-medium">
-                    <span className="flex max-w-[22rem] items-center gap-1.5">
+                    <span className="flex max-w-88 items-center gap-1.5">
                       <span className="truncate">{f.filename}</span>
                       {f.llm_degraded && (
                         <span title="Imported without AI enrichment">
