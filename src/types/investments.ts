@@ -10,6 +10,7 @@ export type InvestmentTransactionType =
   | 'MERGER'
   | 'SPINOFF'
   | 'REINVESTMENT'
+  | 'EXPIRATION'
   | 'OTHER';
 
 export interface InvestmentHoldingResponse {

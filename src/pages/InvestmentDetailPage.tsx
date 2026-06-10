@@ -382,7 +382,7 @@ export function InvestmentDetailPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Types</SelectItem>
-                  {(['BUY', 'SELL', 'DIVIDEND', 'INTEREST', 'FEE', 'TRANSFER_IN', 'TRANSFER_OUT', 'SPLIT', 'MERGER', 'SPINOFF', 'REINVESTMENT', 'OTHER'] as const).map(
+                  {(['BUY', 'SELL', 'DIVIDEND', 'INTEREST', 'FEE', 'TRANSFER_IN', 'TRANSFER_OUT', 'SPLIT', 'MERGER', 'SPINOFF', 'REINVESTMENT', 'EXPIRATION', 'OTHER'] as const).map(
                     (t) => (
                       <SelectItem key={t} value={t}>
                         {formatTypeLabel(t)}

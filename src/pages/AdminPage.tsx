@@ -207,8 +207,11 @@ function JobsTable({ accountUuid }: { accountUuid: string }) {
               <TableCell className="text-right">{job.snapshots_updated}</TableCell>
               <TableCell className="text-right">{job.snapshots_failed}</TableCell>
               <TableCell className="text-right">{job.snapshots_skipped}</TableCell>
-              <TableCell className="text-sm text-destructive max-w-[200px] truncate">
-                {job.error_message}
+              <TableCell
+                className="text-sm text-destructive max-w-[280px] truncate"
+                title={job.error_message ?? undefined}
+              >
+                {job.error_message ?? <span className="text-muted-foreground">—</span>}
               </TableCell>
             </TableRow>
           ))}
@@ -596,7 +599,7 @@ export function AdminPage() {
   );
 
   return (
-    <div className="p-6 space-y-6 max-w-5xl">
+    <div className="p-6 space-y-6 max-w-7xl">
       <h1 className="text-2xl font-bold tracking-tight">Admin</h1>
       <Card>
         <CardHeader>
