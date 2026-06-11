@@ -40,7 +40,7 @@ const STEPS: { key: Step; label: string }[] = [
 ];
 
 // A format group lets one account take statements in more than one parser
-// format (e.g. bank PDFs + a Venmo CSV) — each group has its own parser + zone.
+// format (e.g. bank PDFs + a brokerage CSV) — each group has its own parser + zone.
 interface FormatGroup {
   id: string;
   institution: Institution | '';

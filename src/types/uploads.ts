@@ -9,8 +9,6 @@ export const INSTITUTIONS = [
   'schwab',
   'tdameritrade',
   'ameriprise',
-  'venmo',
-  'cashapp',
 ] as const;
 export type Institution = typeof INSTITUTIONS[number];
 
@@ -21,8 +19,6 @@ export const INSTITUTION_LABELS: Record<Institution, string> = {
   schwab: 'Charles Schwab',
   tdameritrade: 'TD Ameritrade',
   ameriprise: 'Ameriprise',
-  venmo: 'Venmo',
-  cashapp: 'Cash App',
 };
 
 export interface ParsedData {
