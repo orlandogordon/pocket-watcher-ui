@@ -16,6 +16,7 @@ import {
 import { ReadyToImportTable } from './ReadyToImportTable';
 import { RejectedTable } from './RejectedTable';
 import { LlmDegradedBanner } from './LlmDegradedBanner';
+import { ReconciliationBanner } from './ReconciliationBanner';
 import type { ConfirmResponse } from '@/types/uploads';
 import type { RowEdits } from './upload-utils';
 
@@ -180,6 +181,11 @@ export function PreviewSession({ sessionId, onCancel, onConfirmed }: PreviewSess
       {/* LLM degraded banner */}
       {(preview.llm_degraded || preview.llm_summary?.degraded) && (
         <LlmDegradedBanner />
+      )}
+
+      {/* Reconciliation warning banner — independent of llm_degraded above */}
+      {preview.reconciliation_warning && (
+        <ReconciliationBanner delta={preview.reconciliation?.delta} />
       )}
 
       {/* TTL warning banner */}

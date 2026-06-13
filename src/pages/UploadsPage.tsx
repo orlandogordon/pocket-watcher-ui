@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { UploadForm } from '@/components/uploads/UploadForm';
 import { PreviewSession } from '@/components/uploads/PreviewSession';
 import { LlmStatusPill } from '@/components/uploads/LlmStatusPill';
+import { ReconciliationBanner } from '@/components/uploads/ReconciliationBanner';
 import { usePreviewSessions, useCancelSession } from '@/hooks/useStatementUpload';
 import { formatDateTime } from '@/lib/format';
 import { INSTITUTION_LABELS } from '@/types/uploads';
@@ -48,6 +49,9 @@ function SuccessBanner({
         )}
         <p className="text-xs text-muted-foreground">Job ID: {result.upload_job_id}</p>
       </div>
+      {result.reconciliation_warning && (
+        <ReconciliationBanner delta={result.reconciliation?.delta} className="text-left" />
+      )}
       <div className="flex justify-center gap-3">
         <Button variant="outline" asChild>
           <Link to="/uploads/history">

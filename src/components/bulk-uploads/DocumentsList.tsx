@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FileText, Trash2, Eye, Sparkles } from 'lucide-react';
+import { FileText, Trash2, Eye, Sparkles, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -86,6 +86,11 @@ export function DocumentsList({ accountUuid }: DocumentsListProps) {
                       {doc.llm_degraded && (
                         <span title="Imported without AI enrichment">
                           <Sparkles className="h-3.5 w-3.5 shrink-0 text-orange-500" />
+                        </span>
+                      )}
+                      {doc.reconciliation_warning && (
+                        <span title={doc.reconciliation?.detail ?? "Didn't reconcile to statement balance"}>
+                          <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-yellow-500" />
                         </span>
                       )}
                     </button>

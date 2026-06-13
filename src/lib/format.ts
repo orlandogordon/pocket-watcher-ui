@@ -9,6 +9,17 @@ export function formatCurrency(val: string | number): string {
   return currencyFormatter.format(parseFloat(String(val)));
 }
 
+/**
+ * Format a signed amount with an explicit leading sign in both directions
+ * ("+$11,713.25" / "-$3,882.77"), for off-by deltas where the sign itself is
+ * the signal. `formatCurrency` already prefixes negatives with "-"; this just
+ * adds the "+" for positives. Zero renders without a sign.
+ */
+export function formatSignedCurrency(val: string | number): string {
+  const n = parseFloat(String(val));
+  return (n > 0 ? '+' : '') + formatCurrency(n);
+}
+
 export function formatTypeLabel(type: string): string {
   return type
     .split('_')

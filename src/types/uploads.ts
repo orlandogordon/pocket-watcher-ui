@@ -136,6 +136,20 @@ export interface LLMSummary {
   total: number;
 }
 
+// ── Statement reconciliation (frontend todo #49 / backend #78) ─────────────
+// When a statement's parsed rows don't tie out to its own begin/end balance, a
+// transaction was likely dropped or duplicated during parsing. Non-blocking
+// heads-up, modeled on `llm_degraded`: `reconciliation_warning` rides along on
+// every upload response, and `reconciliation` carries the badge numbers (null
+// when there's no warning, or for CSV/parsers without control totals — absence
+// means "not checked", not a failure).
+export interface Reconciliation {
+  /** String-serialized signed Decimal off-by amount (e.g. "11713.25", "-3882.77"). */
+  delta: string;
+  /** Ready-to-show human sentence for tooltip / expanded row. */
+  detail: string;
+}
+
 export interface PreviewResponse {
   preview_session_id: string;
   expires_at: string;
@@ -156,6 +170,9 @@ export interface PreviewResponse {
   llm_summary?: LLMSummary | null;
   // Canonical top-level flag (backend #60); mirrors llm_summary.degraded.
   llm_degraded?: boolean;
+  // True when this statement didn't reconcile to its begin/end balance (#78).
+  reconciliation_warning?: boolean;
+  reconciliation?: Reconciliation | null;
 }
 
 export interface BulkActionResponse extends PreviewResponse {
@@ -180,6 +197,8 @@ export interface ConfirmResponse {
   suggestion_overridden?: number;
   processing_time_ms?: number;
   llm_degraded?: boolean;
+  reconciliation_warning?: boolean;
+  reconciliation?: Reconciliation | null;
 }
 
 export type UploadJobStatus =
@@ -205,6 +224,8 @@ export interface UploadJob {
   file_path?: string;
   error_message?: string;
   llm_degraded?: boolean;
+  reconciliation_warning?: boolean;
+  reconciliation?: Reconciliation | null;
 }
 
 export interface SkippedItem {
@@ -264,6 +285,9 @@ export interface PerFileResult {
   error_message: string | null;
   // True if this file imported with the LLM offline → rows un-enriched (#60).
   llm_degraded: boolean;
+  // True if this file's parsed rows didn't reconcile to its balance (#78).
+  reconciliation_warning: boolean;
+  reconciliation: Reconciliation | null;
 }
 
 /** GET /uploads/bulk/{batch_uuid} → 200 */
@@ -281,6 +305,8 @@ export interface BulkBatchStatus {
   completed_at: string | null;
   // True if any file in the batch degraded (LLM unreachable) (#60).
   llm_degraded: boolean;
+  // True if any file in the batch didn't reconcile to its balance (#78).
+  reconciliation_warning: boolean;
 }
 
 /** GET /uploads/bulk?skip&limit → batches[] */
@@ -324,6 +350,9 @@ export interface DocumentResponse {
   created_at: string;
   // True if this document imported with the LLM offline (#60).
   llm_degraded: boolean;
+  // True if this document's parsed rows didn't reconcile to its balance (#78).
+  reconciliation_warning: boolean;
+  reconciliation: Reconciliation | null;
 }
 
 // ── LLM health (frontend todo #44 / backend #60) ───────────────────────────
