@@ -1,6 +1,5 @@
 import { useState, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { format, parseISO } from 'date-fns';
 import { ArrowLeft, Plus, Pencil, Trash2, X, ChevronUp, ChevronDown } from 'lucide-react';
 import { useAccounts } from '@/hooks/useAccounts';
 import {
@@ -8,7 +7,7 @@ import {
   useInvestmentAccountSummary,
   useInvestmentTransactions,
 } from '@/hooks/useInvestments';
-import { formatCurrency, formatTypeLabel } from '@/lib/format';
+import { formatCurrency, formatDate, formatTypeLabel } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -41,6 +40,7 @@ const TX_TYPE_COLORS: Record<InvestmentTransactionType, string> = {
   FEE: 'bg-red-100 text-red-800',
   TRANSFER_IN: 'bg-gray-100 text-gray-800',
   TRANSFER_OUT: 'bg-gray-100 text-gray-800',
+  EXPIRATION: 'bg-slate-100 text-slate-800',
   SPLIT: 'bg-amber-100 text-amber-800',
   MERGER: 'bg-teal-100 text-teal-800',
   SPINOFF: 'bg-pink-100 text-pink-800',
@@ -69,6 +69,15 @@ function formatOptionSymbol(apiSymbol: string): string | null {
 function getSalePL(tx: InvestmentTransactionResponse): number {
   if (tx.transaction_type !== 'SELL' || !tx.cost_basis_at_sale || !tx.price_per_share || !tx.quantity) return 0;
   return (parseFloat(tx.price_per_share) - parseFloat(tx.cost_basis_at_sale)) * parseFloat(tx.quantity);
+}
+
+function SortIcon({ active, desc }: { active: boolean; desc: boolean }) {
+  if (!active) return null;
+  return desc ? (
+    <ChevronDown className="ml-1 inline h-3.5 w-3.5" />
+  ) : (
+    <ChevronUp className="ml-1 inline h-3.5 w-3.5" />
+  );
 }
 
 export function InvestmentDetailPage() {
@@ -104,15 +113,6 @@ export function InvestmentDetailPage() {
       setSortDesc(true);
     }
     setTxPage(0);
-  }
-
-  function SortIcon({ column }: { column: string }) {
-    if (sortBy !== column) return null;
-    return sortDesc ? (
-      <ChevronDown className="ml-1 inline h-3.5 w-3.5" />
-    ) : (
-      <ChevronUp className="ml-1 inline h-3.5 w-3.5" />
-    );
   }
 
   const txSymbols = useMemo(() => {
@@ -172,7 +172,11 @@ export function InvestmentDetailPage() {
 
   // Reset to first page when filters change
   const filterKey = `${filterType}|${filterSymbol}|${filterDateFrom}|${filterDateTo}`;
-  useMemo(() => setTxPage(0), [filterKey]);
+  const [prevFilterKey, setPrevFilterKey] = useState(filterKey);
+  if (filterKey !== prevFilterKey) {
+    setPrevFilterKey(filterKey);
+    setTxPage(0);
+  }
 
   const showAll = txPageSize === 0;
   const totalTxPages = showAll ? 1 : Math.max(1, Math.ceil(filteredTransactions.length / txPageSize));
@@ -451,26 +455,26 @@ export function InvestmentDetailPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead className="cursor-pointer select-none" onClick={() => toggleSort('transaction_date')}>
-                    Date<SortIcon column="transaction_date" />
+                    Date<SortIcon active={sortBy === 'transaction_date'} desc={sortDesc} />
                   </TableHead>
                   <TableHead className="cursor-pointer select-none" onClick={() => toggleSort('transaction_type')}>
-                    Type<SortIcon column="transaction_type" />
+                    Type<SortIcon active={sortBy === 'transaction_type'} desc={sortDesc} />
                   </TableHead>
                   <TableHead className="cursor-pointer select-none" onClick={() => toggleSort('symbol')}>
-                    Symbol<SortIcon column="symbol" />
+                    Symbol<SortIcon active={sortBy === 'symbol'} desc={sortDesc} />
                   </TableHead>
                   <TableHead className="cursor-pointer select-none" onClick={() => toggleSort('security_type')}>
-                    Security<SortIcon column="security_type" />
+                    Security<SortIcon active={sortBy === 'security_type'} desc={sortDesc} />
                   </TableHead>
                   <TableHead className="text-right">Qty</TableHead>
                   <TableHead className="cursor-pointer select-none text-right" onClick={() => toggleSort('price_per_share')}>
-                    Price/Share<SortIcon column="price_per_share" />
+                    Price/Share<SortIcon active={sortBy === 'price_per_share'} desc={sortDesc} />
                   </TableHead>
                   <TableHead className="cursor-pointer select-none text-right" onClick={() => toggleSort('total_amount')}>
-                    Total<SortIcon column="total_amount" />
+                    Total<SortIcon active={sortBy === 'total_amount'} desc={sortDesc} />
                   </TableHead>
                   <TableHead className="cursor-pointer select-none text-right" onClick={() => toggleSort('sale_pl')}>
-                    Sale P&L<SortIcon column="sale_pl" />
+                    Sale P&L<SortIcon active={sortBy === 'sale_pl'} desc={sortDesc} />
                   </TableHead>
                   <TableHead>Description</TableHead>
                   <TableHead className="w-[80px]" />
@@ -480,7 +484,7 @@ export function InvestmentDetailPage() {
                 {paginatedTransactions.map((tx) => (
                   <TableRow key={tx.id}>
                     <TableCell className="tabular-nums text-sm">
-                      {format(parseISO(tx.transaction_date), 'MMM d, yyyy')}
+                      {formatDate(tx.transaction_date)}
                     </TableCell>
                     <TableCell>
                       <Badge

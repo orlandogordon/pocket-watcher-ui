@@ -169,9 +169,9 @@ export function AnalyticsPage() {
 
   const avgNet = parseFloat(data?.totals.avg_monthly_net ?? '0');
 
-  const handleChartClick = useCallback((state: { activeLabel?: string }) => {
-    if (!state?.activeLabel) return;
-    const idx = MONTH_LABELS.indexOf(state.activeLabel);
+  const handleChartClick = useCallback((state: { activeLabel?: string | number }) => {
+    if (state?.activeLabel == null) return;
+    const idx = MONTH_LABELS.indexOf(String(state.activeLabel));
     if (idx === -1) return;
     const month = idx + 1;
     setSelectedMonth((prev) => (prev === month ? undefined : month));
@@ -271,7 +271,7 @@ export function AnalyticsPage() {
                       width={56}
                     />
                     <Tooltip
-                      formatter={(value: number) => [formatCurrency(value), undefined]}
+                      formatter={(value) => [formatCurrency(value as number), undefined]}
                       labelStyle={{ fontWeight: 600 }}
                     />
                     <Legend />

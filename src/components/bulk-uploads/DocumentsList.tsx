@@ -11,6 +11,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { useDocuments } from '@/hooks/useBulkUpload';
+import { formatDateTime } from '@/lib/format';
 import { INSTITUTION_LABELS, type Institution } from '@/types/uploads';
 import type { DocumentResponse, DocumentStatus } from '@/types/uploads';
 import { DocumentViewerDialog } from './DocumentViewerDialog';
@@ -62,6 +63,7 @@ export function DocumentsList({ accountUuid }: DocumentsListProps) {
               <TableHead>Institution</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Imported</TableHead>
+              <TableHead className="text-right">Skipped</TableHead>
               <TableHead>Uploaded</TableHead>
               <TableHead className="w-[88px]" />
             </TableRow>
@@ -70,6 +72,8 @@ export function DocumentsList({ accountUuid }: DocumentsListProps) {
             {documents.map((doc) => {
               const imported =
                 doc.transactions_created + doc.investment_transactions_created;
+              const skipped =
+                doc.transactions_skipped + doc.investment_transactions_skipped;
               return (
                 <TableRow key={doc.document_uuid}>
                   <TableCell className="font-medium">
@@ -98,8 +102,18 @@ export function DocumentsList({ accountUuid }: DocumentsListProps) {
                   <TableCell className="text-right tabular-nums">
                     {imported}
                   </TableCell>
+                  <TableCell
+                    className={`text-right tabular-nums ${
+                      skipped > 0
+                        ? 'text-muted-foreground'
+                        : 'text-muted-foreground/40'
+                    }`}
+                    title="Duplicate rows skipped during import (already in this account)"
+                  >
+                    {skipped}
+                  </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
-                    {new Date(doc.created_at).toLocaleDateString()}
+                    {formatDateTime(doc.created_at)}
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1">

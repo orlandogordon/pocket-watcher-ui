@@ -85,7 +85,10 @@ export function InvestmentTransactionFormDialog({
   useEffect(() => {
     if (open) {
       form.reset({
-        transaction_type: transaction?.transaction_type ?? 'BUY',
+        transaction_type:
+          transaction && TRANSACTION_TYPES.includes(transaction.transaction_type)
+            ? (transaction.transaction_type as FormValues['transaction_type'])
+            : 'BUY',
         symbol: transaction?.symbol ?? '',
         quantity: transaction?.quantity ?? '',
         price_per_share: transaction?.price_per_share ?? '',

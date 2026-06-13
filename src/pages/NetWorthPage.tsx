@@ -9,11 +9,11 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
-import type { TooltipProps } from 'recharts';
+import type { TooltipContentProps } from 'recharts';
 
 import { useAccounts, useAccountStats } from '@/hooks/useAccounts';
 import { useNetWorthHistory } from '@/hooks/useNetWorthHistory';
-import { formatCurrency } from '@/lib/format';
+import { formatCurrency, formatDate } from '@/lib/format';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { AccountHistoryCard } from '@/components/net-worth/AccountHistoryCard';
@@ -25,8 +25,8 @@ const RANGE_OPTIONS = [
   { label: 'All', days: 3650 },
 ] as const;
 
-function NetWorthTooltip({ active, payload }: TooltipProps<number, string>) {
-  if (!active || !payload?.length) return null;
+function NetWorthTooltip({ active, payload }: Partial<TooltipContentProps<number, string>>) {
+  if (!active || !payload || !payload.length) return null;
   const d = payload[0].payload as {
     rawDate: string;
     netWorth: number;
@@ -43,7 +43,7 @@ function NetWorthTooltip({ active, payload }: TooltipProps<number, string>) {
 
   return (
     <div className="rounded-md border bg-background px-3 py-2 text-sm shadow-md">
-      <div className="font-semibold mb-1">{format(parseISO(d.rawDate), 'MMM d, yyyy')}</div>
+      <div className="font-semibold mb-1">{formatDate(d.rawDate)}</div>
       <div className="flex justify-between gap-4">
         <span className="text-muted-foreground">Net Worth</span>
         <span className="font-medium">{formatCurrency(d.netWorth)}</span>
@@ -214,11 +214,11 @@ export function NetWorthPage() {
           </div>
           {showStalenessCaption && latestPoint && (
             <p className="text-xs text-muted-foreground mt-2">
-              As of {format(parseISO(latestPoint.date), 'MMM d, yyyy')}:{' '}
+              As of {formatDate(latestPoint.date)}:{' '}
               {latestPoint.accounts_total - latestPoint.accounts_fresh} of{' '}
               {latestPoint.accounts_total} accounts using carried-forward balances
               {latestPoint.oldest_snapshot_date &&
-                ` (oldest snapshot: ${format(parseISO(latestPoint.oldest_snapshot_date), 'MMM d, yyyy')})`}
+                ` (oldest snapshot: ${formatDate(latestPoint.oldest_snapshot_date)})`}
             </p>
           )}
         </CardContent>

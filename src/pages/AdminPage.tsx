@@ -10,7 +10,7 @@ import {
   type SnapshotJob,
   type NeedsReviewSnapshot,
 } from '@/hooks/useAdmin';
-import { formatCurrency } from '@/lib/format';
+import { formatCurrency, formatDateTime } from '@/lib/format';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -201,7 +201,7 @@ function JobsTable({ accountUuid }: { accountUuid: string }) {
                 {job.start_date} → {job.end_date}
               </TableCell>
               <TableCell className="text-sm">
-                {new Date(job.created_at).toLocaleString()}
+                {formatDateTime(job.created_at)}
               </TableCell>
               <TableCell className="text-right">{job.snapshots_created}</TableCell>
               <TableCell className="text-right">{job.snapshots_updated}</TableCell>
@@ -327,16 +327,19 @@ function SnapshotEditDialog({
   const [dismissReview, setDismissReview] = useState(true);
 
   // Reset form when snapshot changes
-  useMemo(() => {
-    if (!snapshot) return;
-    const initial: Record<string, string> = {};
-    for (const f of SNAPSHOT_EDIT_FIELDS) {
-      const val = (snapshot as unknown as Record<string, unknown>)[f.key];
-      initial[f.key] = val != null ? String(val) : '';
+  const [prevSnapshot, setPrevSnapshot] = useState(snapshot);
+  if (snapshot !== prevSnapshot) {
+    setPrevSnapshot(snapshot);
+    if (snapshot) {
+      const initial: Record<string, string> = {};
+      for (const f of SNAPSHOT_EDIT_FIELDS) {
+        const val = (snapshot as unknown as Record<string, unknown>)[f.key];
+        initial[f.key] = val != null ? String(val) : '';
+      }
+      setValues(initial);
+      setDismissReview(true);
     }
-    setValues(initial);
-    setDismissReview(true);
-  }, [snapshot]);
+  }
 
   function handleSubmit() {
     if (!snapshot) return;

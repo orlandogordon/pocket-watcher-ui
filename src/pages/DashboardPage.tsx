@@ -1,5 +1,4 @@
 import { Link } from 'react-router-dom';
-import { format, parseISO } from 'date-fns';
 import {
   AreaChart,
   Area,
@@ -15,7 +14,7 @@ import { useAccountStats } from '@/hooks/useAccounts';
 import { useTransactions } from '@/hooks/useTransactions';
 import { useBudgetMonth, useBudgetMonthPerformance } from '@/hooks/useBudgets';
 import { useNetWorthHistory } from '@/hooks/useNetWorthHistory';
-import { formatCurrency, formatTypeLabel } from '@/lib/format';
+import { formatCurrency, formatDate, formatTypeLabel } from '@/lib/format';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -56,7 +55,7 @@ export function DashboardPage() {
 
   const rawHistory = netWorthHistory?.data ?? [];
   const chartData = rawHistory.map((pt) => ({
-    date: format(parseISO(pt.date), 'MMM d'),
+    date: formatDate(pt.date, 'MMM d'),
     netWorth: pt.net_worth,
   }));
 
@@ -232,7 +231,7 @@ export function DashboardPage() {
                 {transactions.map((txn) => (
                   <tr key={txn.id} className="border-b last:border-0">
                     <td className="py-2 text-muted-foreground">
-                      {format(parseISO(txn.transaction_date), 'MMM d')}
+                      {formatDate(txn.transaction_date, 'MMM d')}
                     </td>
                     <td className="py-2 max-w-0 truncate pr-4">
                       <span title={txn.description}>

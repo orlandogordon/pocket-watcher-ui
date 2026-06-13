@@ -1,13 +1,12 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { format, parseISO } from 'date-fns';
 import { Plus, Pencil, Trash2, X, Tag, Scissors, CalendarRange, Link2, MoreHorizontal, ChevronUp, ChevronDown, ArrowLeftRight, AlertCircle } from 'lucide-react';
 import { useTransactions, useTransactionStats } from '@/hooks/useTransactions';
 import { useAccounts } from '@/hooks/useAccounts';
 import { useCategories } from '@/hooks/useCategories';
 import { useTags, useRemoveTagFromTransaction } from '@/hooks/useTags';
 import { useTransferSuggestions, useTransferOrphans } from '@/hooks/useTransferSuggestions';
-import { formatCurrency, formatTypeLabel } from '@/lib/format';
+import { formatCurrency, formatDate, formatTypeLabel } from '@/lib/format';
 import { TransactionFormDialog } from '@/components/transactions/TransactionFormDialog';
 import { DeleteTransactionDialog } from '@/components/transactions/DeleteTransactionDialog';
 import { ManageTagsDialog } from '@/components/tags/ManageTagsDialog';
@@ -49,6 +48,15 @@ const TRANSACTION_TYPES = [
 const EXPENSE_TYPES = new Set(['PURCHASE', 'WITHDRAWAL', 'FEE']);
 
 const LIMIT = 50;
+
+function SortIcon({ active, desc }: { active: boolean; desc: boolean }) {
+  if (!active) return null;
+  return desc ? (
+    <ChevronDown className="ml-1 inline h-3.5 w-3.5" />
+  ) : (
+    <ChevronUp className="ml-1 inline h-3.5 w-3.5" />
+  );
+}
 
 const EMPTY_FILTERS: TransactionFilters = {
   account_uuid: undefined,
@@ -125,9 +133,11 @@ export function TransactionsPage() {
   const rangeEnd = Math.min((page + 1) * LIMIT, totalCount);
 
   // Reset to page 0 when filters change
-  useEffect(() => {
+  const [prevFilters, setPrevFilters] = useState(filters);
+  if (filters !== prevFilters) {
+    setPrevFilters(filters);
     setPage(0);
-  }, [filters]);
+  }
 
   function setFilter<K extends keyof TransactionFilters>(key: K, value: TransactionFilters[K]) {
     setFilters((prev) => ({ ...prev, [key]: value || undefined }));
@@ -156,15 +166,6 @@ export function TransactionsPage() {
       setSortDesc(true);
     }
     setPage(0);
-  }
-
-  function SortIcon({ column }: { column: string }) {
-    if (sortBy !== column) return null;
-    return sortDesc ? (
-      <ChevronDown className="ml-1 inline h-3.5 w-3.5" />
-    ) : (
-      <ChevronUp className="ml-1 inline h-3.5 w-3.5" />
-    );
   }
 
   const net = stats ? parseFloat(stats.net) : 0;
@@ -362,27 +363,27 @@ export function TransactionsPage() {
             <TableHeader>
               <TableRow>
                 <TableHead className="cursor-pointer select-none" onClick={() => toggleSort('transaction_date')}>
-                  Date<SortIcon column="transaction_date" />
+                  Date<SortIcon active={sortBy === 'transaction_date'} desc={sortDesc} />
                 </TableHead>
                 <TableHead className="cursor-pointer select-none" onClick={() => toggleSort('description')}>
-                  Description<SortIcon column="description" />
+                  Description<SortIcon active={sortBy === 'description'} desc={sortDesc} />
                 </TableHead>
                 <TableHead className="cursor-pointer select-none" onClick={() => toggleSort('merchant_name')}>
-                  Merchant<SortIcon column="merchant_name" />
+                  Merchant<SortIcon active={sortBy === 'merchant_name'} desc={sortDesc} />
                 </TableHead>
                 <TableHead className="cursor-pointer select-none" onClick={() => toggleSort('account_uuid')}>
-                  Account<SortIcon column="account_uuid" />
+                  Account<SortIcon active={sortBy === 'account_uuid'} desc={sortDesc} />
                 </TableHead>
                 <TableHead className="cursor-pointer select-none" onClick={() => toggleSort('category_uuid')}>
-                  Category<SortIcon column="category_uuid" />
+                  Category<SortIcon active={sortBy === 'category_uuid'} desc={sortDesc} />
                 </TableHead>
                 <TableHead>Subcategory</TableHead>
                 <TableHead>Tags</TableHead>
                 <TableHead className="cursor-pointer select-none text-right" onClick={() => toggleSort('amount')}>
-                  Amount<SortIcon column="amount" />
+                  Amount<SortIcon active={sortBy === 'amount'} desc={sortDesc} />
                 </TableHead>
                 <TableHead className="cursor-pointer select-none" onClick={() => toggleSort('transaction_type')}>
-                  Type<SortIcon column="transaction_type" />
+                  Type<SortIcon active={sortBy === 'transaction_type'} desc={sortDesc} />
                 </TableHead>
                 <TableHead>Source</TableHead>
                 <TableHead>Comments</TableHead>
@@ -395,7 +396,7 @@ export function TransactionsPage() {
                 return (
                   <TableRow key={tx.id}>
                     <TableCell className="whitespace-nowrap text-sm">
-                      {format(parseISO(tx.transaction_date), 'MMM d, yyyy')}
+                      {formatDate(tx.transaction_date)}
                     </TableCell>
                     <TableCell className="max-w-[200px] truncate" title={tx.description}>{tx.description}</TableCell>
                     <TableCell className="text-sm text-muted-foreground" title={tx.merchant_name ?? undefined}>

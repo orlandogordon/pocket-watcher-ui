@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { format, parseISO } from 'date-fns';
 import {
   AlertCircle,
   ArrowRight,
@@ -15,7 +14,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import { apiFetch } from '@/lib/api';
-import { formatCurrency, formatTypeLabel } from '@/lib/format';
+import { formatCurrency, formatDate, formatTypeLabel } from '@/lib/format';
 import {
   dataHealthKeys,
   useAttentionAction,
@@ -452,7 +451,7 @@ export function InboxPage() {
                       </div>
                     )}
                     <div className="w-24 text-muted-foreground text-xs whitespace-nowrap">
-                      {date ? format(parseISO(date), 'MMM d, yyyy') : '—'}
+                      {date ? formatDate(date) : '—'}
                     </div>
                     <div className="flex-1 min-w-[180px] truncate" title={desc}>
                       {desc}

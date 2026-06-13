@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { format, parseISO } from 'date-fns';
 import { Pencil, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
 import {
   Dialog,
@@ -36,7 +35,7 @@ import {
   useDeleteRelationship,
   useTransaction,
 } from '@/hooks/useTransactions';
-import { formatCurrency } from '@/lib/format';
+import { formatCurrency, formatDate } from '@/lib/format';
 import { TransactionSearchSelect } from './TransactionSearchSelect';
 import type { TransactionResponse, TransactionRelationshipResponse } from '@/types/transactions';
 import {
@@ -84,14 +83,6 @@ export function RelationshipDialog({ open, onOpenChange, transaction }: Props) {
   const [deleteTarget, setDeleteTarget] = useState<TransactionRelationshipResponse | null>(null);
 
   const isAbsorbing = ABSORBING_RELATIONSHIP_TYPES.has(relType);
-
-  // The "from" transaction is the one being absorbed (the refund/credit).
-  // Its full amount is the default allocation.
-  function getDefaultAllocation() {
-    const fromTx = direction === 'from' ? transaction : targetTx;
-    if (!fromTx) return '';
-    return String(Math.abs(parseFloat(fromTx.amount)));
-  }
 
   function resetForm() {
     setTargetUuid(null);
@@ -401,7 +392,7 @@ function RelationshipRow({
         <p className="text-sm truncate">
           <span className="font-medium">{linkedTx.description}</span>
           <span className="ml-2 text-muted-foreground">
-            {format(parseISO(linkedTx.transaction_date), 'MMM d, yyyy')}
+            {formatDate(linkedTx.transaction_date)}
           </span>
           <span className="ml-2">{formatCurrency(linkedTx.amount)}</span>
         </p>

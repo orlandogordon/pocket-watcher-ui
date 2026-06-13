@@ -12,6 +12,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { useUploadJobs } from '@/hooks/useStatementUpload';
+import { formatDateTime } from '@/lib/format';
 import { INSTITUTION_LABELS } from '@/types/uploads';
 import type { UploadJob, UploadJobStatus } from '@/types/uploads';
 
@@ -159,10 +160,10 @@ export function UploadHistoryPage() {
                     <TableCell className="text-sm">{institutionLabel(job.institution)}</TableCell>
                     <TableCell>{statusBadge(job.status)}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">
-                      {new Date(job.created_at).toLocaleString()}
+                      {formatDateTime(job.created_at)}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
-                      {job.completed_at ? new Date(job.completed_at).toLocaleString() : '—'}
+                      {job.completed_at ? formatDateTime(job.completed_at) : '—'}
                     </TableCell>
                     <TableCell className="text-sm text-right">
                       {job.transactions_created != null ? (

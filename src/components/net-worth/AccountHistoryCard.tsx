@@ -8,10 +8,10 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
-import type { TooltipProps } from 'recharts';
+import type { TooltipContentProps } from 'recharts';
 
 import { useAccountHistory } from '@/hooks/useAccountHistory';
-import { formatCurrency } from '@/lib/format';
+import { formatCurrency, formatDate } from '@/lib/format';
 import type { AccountResponse } from '@/types/accounts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
@@ -26,8 +26,8 @@ function AccountTooltip({
   payload,
   hasBreakdown,
   isLiability,
-}: TooltipProps<number, string> & { hasBreakdown: boolean; isLiability: boolean }) {
-  if (!active || !payload?.length) return null;
+}: Partial<TooltipContentProps<number, string>> & { hasBreakdown: boolean; isLiability: boolean }) {
+  if (!active || !payload || !payload.length) return null;
   const d = payload[0].payload as {
     rawDate: string;
     balance: number;
@@ -46,7 +46,7 @@ function AccountTooltip({
 
   return (
     <div className="rounded-md border bg-background px-3 py-2 text-sm shadow-md">
-      <div className="font-semibold mb-1">{format(parseISO(d.rawDate), 'MMM d, yyyy')}</div>
+      <div className="font-semibold mb-1">{formatDate(d.rawDate)}</div>
       {hasBreakdown ? (
         <>
           <div className="flex justify-between gap-4">
@@ -216,9 +216,9 @@ export function AccountHistoryCard({ account, days, dateFormat }: AccountHistory
         </div>
         {showStalenessCaption && latestPoint && (
           <p className="text-xs text-muted-foreground mt-2">
-            As of {format(parseISO(latestPoint.date), 'MMM d, yyyy')}: balance carried forward
+            As of {formatDate(latestPoint.date)}: balance carried forward
             {lastFreshPoint &&
-              ` (last snapshot: ${format(parseISO(lastFreshPoint.date), 'MMM d, yyyy')})`}
+              ` (last snapshot: ${formatDate(lastFreshPoint.date)})`}
           </p>
         )}
       </CardContent>

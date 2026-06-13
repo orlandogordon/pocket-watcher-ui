@@ -1,10 +1,9 @@
 import { useState, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { format, parseISO } from 'date-fns';
 import { ArrowLeft, Plus, Trash2, DollarSign, Percent, CreditCard, Landmark, TrendingUp } from 'lucide-react';
 import { useAccounts } from '@/hooks/useAccounts';
 import { useDebtPayments } from '@/hooks/useDebt';
-import { formatCurrency } from '@/lib/format';
+import { formatCurrency, formatDate } from '@/lib/format';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -159,7 +158,7 @@ export function DebtDetailPage() {
                 {sortedPayments.map((p) => (
                   <TableRow key={p.id}>
                     <TableCell className="tabular-nums">
-                      {format(parseISO(p.payment_date), 'MMM d, yyyy')}
+                      {formatDate(p.payment_date)}
                     </TableCell>
                     <TableCell className="text-right tabular-nums font-medium">
                       {formatCurrency(p.payment_amount)}

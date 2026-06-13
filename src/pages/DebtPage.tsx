@@ -155,7 +155,8 @@ export function DebtPage() {
     setOverrides((prev) => {
       const k = overrideKey(month, accountUuid);
       if (isNaN(raw) || value === '') {
-        const { [k]: _, ...rest } = prev;
+        const rest = { ...prev };
+        delete rest[k];
         return rest;
       }
       return { ...prev, [k]: Math.max(raw, min) };

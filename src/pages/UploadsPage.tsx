@@ -7,6 +7,7 @@ import { UploadForm } from '@/components/uploads/UploadForm';
 import { PreviewSession } from '@/components/uploads/PreviewSession';
 import { LlmStatusPill } from '@/components/uploads/LlmStatusPill';
 import { usePreviewSessions, useCancelSession } from '@/hooks/useStatementUpload';
+import { formatDateTime } from '@/lib/format';
 import { INSTITUTION_LABELS } from '@/types/uploads';
 import type { ConfirmResponse, PreviewResponse, Institution } from '@/types/uploads';
 
@@ -64,7 +65,7 @@ function SuccessBanner({
 }
 
 function TimeRemaining({ expiresAt }: { expiresAt: string }) {
-  const [now, setNow] = useState(Date.now());
+  const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 60_000);
@@ -101,7 +102,7 @@ function ActiveSessions({ onResume }: { onResume: (sessionId: string) => void })
                 <p className="text-sm font-medium">{s.filename}</p>
                 <p className="text-xs text-muted-foreground">
                   {INSTITUTION_LABELS[s.institution as Institution] ?? s.institution} · Created{' '}
-                  {new Date(s.created_at).toLocaleString()}
+                  {formatDateTime(s.created_at)}
                 </p>
                 {s.summary && (
                   <p className="text-xs text-muted-foreground">

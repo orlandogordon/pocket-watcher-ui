@@ -31,7 +31,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { apiFetch } from '@/lib/api';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCreateTemplate } from '@/hooks/useBudgets';
-import { useCategories, buildCategoryMap, getCategoryLabel } from '@/hooks/useCategories';
+import { useCategories } from '@/hooks/useCategories';
 import type { BudgetTemplateResponse } from '@/types/budgets';
 
 const categoryRowSchema = z.object({
@@ -65,8 +65,6 @@ export function TemplateFormDialog({ open, onOpenChange, template }: TemplateFor
   const qc = useQueryClient();
   const createTemplate = useCreateTemplate();
   const { data: categories } = useCategories();
-
-  const categoryMap = buildCategoryMap(categories ?? []);
 
   // Build flat list of all categories (parents + children)
   const allCategories = (categories ?? []).flatMap((cat) => [

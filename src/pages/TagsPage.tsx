@@ -89,7 +89,9 @@ export function TagsPage() {
                           {tag.tag_name}
                         </span>
                         {tag.is_system && (
-                          <Lock className="h-3 w-3 text-muted-foreground" title="System tag" />
+                          <span title="System tag" className="inline-flex">
+                            <Lock className="h-3 w-3 text-muted-foreground" />
+                          </span>
                         )}
                       </span>
                     </TableCell>

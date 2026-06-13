@@ -25,7 +25,7 @@ import { INSTITUTIONS, INSTITUTION_LABELS } from '@/types/uploads';
 import type { PreviewResponse } from '@/types/uploads';
 
 const schema = z.object({
-  institution: z.enum(INSTITUTIONS, { required_error: 'Select an institution' }),
+  institution: z.enum(INSTITUTIONS, { error: 'Select an institution' }),
   account_uuid: z.string().optional(),
 });
 

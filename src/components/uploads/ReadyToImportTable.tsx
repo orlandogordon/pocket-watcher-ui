@@ -20,7 +20,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { formatCurrency, formatTypeLabel } from '@/lib/format';
+import { formatCurrency, formatDateTime, formatTypeLabel } from '@/lib/format';
 import { useCategories, buildCategoryMap } from '@/hooks/useCategories';
 import { useTags } from '@/hooks/useTags';
 import type { CategoryResponse } from '@/types/categories';
@@ -203,7 +203,7 @@ function DetailRow({
             {item.llm_processed_at && (
               <div className="truncate">
                 <span className="text-muted-foreground">Processed: </span>
-                <span>{new Date(item.llm_processed_at).toLocaleString()}</span>
+                <span>{formatDateTime(item.llm_processed_at)}</span>
               </div>
             )}
             {item.llm_suggestion && (

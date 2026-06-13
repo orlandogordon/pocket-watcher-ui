@@ -51,6 +51,8 @@ function buildEditedData(edits: RowEdits): Record<string, unknown> {
 
 export function PreviewSession({ sessionId, onCancel, onConfirmed }: PreviewSessionProps) {
   const [pendingTempId, setPendingTempId] = useState<string | null>(null);
+  // Captured once at mount so the TTL check stays pure across re-renders.
+  const [mountedAt] = useState(() => Date.now());
 
   const { data: preview, isLoading, error } = usePreviewSession(sessionId);
   const rejectItem = useRejectItem(sessionId);
@@ -140,7 +142,7 @@ export function PreviewSession({ sessionId, onCancel, onConfirmed }: PreviewSess
   }
 
   const summary = preview.summary ?? { total_parsed: 0, rejected: 0, ready_to_import: 0 };
-  const hoursLeft = (new Date(preview.expires_at).getTime() - Date.now()) / 3_600_000;
+  const hoursLeft = (new Date(preview.expires_at).getTime() - mountedAt) / 3_600_000;
   const showTtlWarning = hoursLeft < 1;
 
   const allReady = [

@@ -109,7 +109,7 @@ export function useRefreshPrices() {
 export function useDeleteInvestmentTransaction() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ uuid, accountUuid }: { uuid: string; accountUuid: string }) =>
+    mutationFn: ({ uuid }: { uuid: string; accountUuid: string }) =>
       apiFetch<void>(`/investments/transactions/${uuid}`, { method: 'DELETE' }),
     onSuccess: (_data, variables) => {
       qc.invalidateQueries({ queryKey: ['investments', 'transactions', variables.accountUuid] });

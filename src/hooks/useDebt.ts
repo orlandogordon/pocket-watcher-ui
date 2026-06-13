@@ -31,7 +31,7 @@ export function useCreateDebtPayment() {
 export function useDeleteDebtPayment() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ uuid, accountUuid }: { uuid: string; accountUuid: string }) =>
+    mutationFn: ({ uuid }: { uuid: string; accountUuid: string }) =>
       apiFetch<void>(`/debt/payments/${uuid}`, { method: 'DELETE' }),
     onSuccess: (_data, variables) => {
       qc.invalidateQueries({ queryKey: ['debt', 'payments', variables.accountUuid] });

@@ -118,7 +118,6 @@ export function useUpdatePlanMonth() {
     mutationFn: ({
       monthUuid,
       data,
-      planUuid,
     }: {
       monthUuid: string;
       data: FinancialPlanMonthUpdate;
@@ -138,7 +137,7 @@ export function useUpdatePlanMonth() {
 export function useDeletePlanMonth() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ monthUuid, planUuid }: { monthUuid: string; planUuid: string }) =>
+    mutationFn: ({ monthUuid }: { monthUuid: string; planUuid: string }) =>
       apiFetch<void>(`/financial_plans/months/${monthUuid}`, { method: 'DELETE' }),
     onSuccess: (_data, { planUuid }) => {
       qc.invalidateQueries({ queryKey: planKeys.detail(planUuid) });
@@ -153,7 +152,6 @@ export function useCreatePlanExpense() {
     mutationFn: ({
       monthUuid,
       data,
-      planUuid,
     }: {
       monthUuid: string;
       data: FinancialPlanExpenseCreate;
@@ -176,7 +174,6 @@ export function useBulkCreateExpenses() {
     mutationFn: ({
       monthUuid,
       data,
-      planUuid,
     }: {
       monthUuid: string;
       data: FinancialPlanExpenseCreate[];
@@ -199,7 +196,6 @@ export function useUpdatePlanExpense() {
     mutationFn: ({
       expenseUuid,
       data,
-      planUuid,
     }: {
       expenseUuid: string;
       data: Partial<FinancialPlanExpenseCreate>;
@@ -219,7 +215,7 @@ export function useUpdatePlanExpense() {
 export function useDeletePlanExpense() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ expenseUuid, planUuid }: { expenseUuid: string; planUuid: string }) =>
+    mutationFn: ({ expenseUuid }: { expenseUuid: string; planUuid: string }) =>
       apiFetch<void>(`/financial_plans/expenses/${expenseUuid}`, { method: 'DELETE' }),
     onSuccess: (_data, { planUuid }) => {
       qc.invalidateQueries({ queryKey: planKeys.detail(planUuid) });

@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import { format, parseISO } from 'date-fns';
 import { Search, X } from 'lucide-react';
 import { useTransactions } from '@/hooks/useTransactions';
-import { formatCurrency } from '@/lib/format';
+import { formatCurrency, formatDate } from '@/lib/format';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import type { TransactionResponse } from '@/types/transactions';
@@ -65,7 +64,7 @@ export function TransactionSearchSelect({ value, onChange, excludeUuid, placehol
         <div className="flex-1 truncate">
           <span className="font-medium">{selectedTx.description}</span>
           <span className="ml-2 text-muted-foreground">
-            {format(parseISO(selectedTx.transaction_date), 'MMM d, yyyy')}
+            {formatDate(selectedTx.transaction_date)}
           </span>
           <span className="ml-2">{formatCurrency(selectedTx.amount)}</span>
         </div>
@@ -103,7 +102,7 @@ export function TransactionSearchSelect({ value, onChange, excludeUuid, placehol
               <div className="flex-1 truncate">
                 <span className="font-medium">{tx.description}</span>
                 <span className="ml-2 text-muted-foreground">
-                  {format(parseISO(tx.transaction_date), 'MMM d, yyyy')}
+                  {formatDate(tx.transaction_date)}
                 </span>
               </div>
               <span className="shrink-0 tabular-nums">{formatCurrency(tx.amount)}</span>
