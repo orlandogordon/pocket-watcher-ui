@@ -11,7 +11,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { useDocuments } from '@/hooks/useBulkUpload';
-import { formatDateTime } from '@/lib/format';
+import { formatDateTime, formatSignedCurrency } from '@/lib/format';
 import { INSTITUTION_LABELS, type Institution } from '@/types/uploads';
 import type { DocumentResponse, DocumentStatus } from '@/types/uploads';
 import { DocumentViewerDialog } from './DocumentViewerDialog';
@@ -89,8 +89,14 @@ export function DocumentsList({ accountUuid }: DocumentsListProps) {
                         </span>
                       )}
                       {doc.reconciliation_warning && (
-                        <span title={doc.reconciliation?.detail ?? "Didn't reconcile to statement balance"}>
-                          <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-yellow-500" />
+                        <span
+                          className="flex shrink-0 items-center gap-1 text-xs font-medium text-yellow-600"
+                          title={doc.reconciliation?.detail ?? "Didn't reconcile to statement balance"}
+                        >
+                          <AlertTriangle className="h-3.5 w-3.5" />
+                          {doc.reconciliation?.delta != null && (
+                            <span>off by {formatSignedCurrency(doc.reconciliation.delta)}</span>
+                          )}
                         </span>
                       )}
                     </button>

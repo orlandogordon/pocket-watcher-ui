@@ -140,10 +140,9 @@ export function BatchProgress({
         <ReconciliationBanner>
           {unreconciledCount > 0
             ? `${unreconciledCount} statement${unreconciledCount === 1 ? '' : 's'} didn't balance`
-            : 'Some statements didn’t balance'}{' '}
-          — parsed transactions didn&rsquo;t tie out to the statement balance, so
-          a row may have been dropped or duplicated. The rows imported; re-check
-          the flagged statement{unreconciledCount === 1 ? '' : 's'} below.
+            : 'Some statements didn’t balance'}
+          . The rows still imported; re-check the flagged statement
+          {unreconciledCount === 1 ? '' : 's'} below.
         </ReconciliationBanner>
       )}
 

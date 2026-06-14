@@ -26,12 +26,11 @@ export function ReconciliationBanner({
     <ImportWarningBanner icon={AlertTriangle} tone="yellow" className={className}>
       {children ?? (
         <>
-          This statement didn&rsquo;t balance — parsed transactions are off by{' '}
+          This statement didn&rsquo;t balance — off by{' '}
           <span className="font-medium">
             {formatSignedCurrency(delta ?? '0')}
           </span>
-          . The rows imported, but one may have been dropped or duplicated;
-          re-check this statement.
+          . The rows still imported; re-check this statement.
         </>
       )}
     </ImportWarningBanner>
