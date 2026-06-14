@@ -9,6 +9,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useDeleteAccount } from '@/hooks/useAccounts';
 import { ApiError } from '@/lib/api';
 import type { AccountResponse } from '@/types/accounts';
@@ -21,13 +22,14 @@ interface DeleteAccountDialogProps {
 
 export function DeleteAccountDialog({ open, onOpenChange, account }: DeleteAccountDialogProps) {
   const [conflictMessage, setConflictMessage] = useState<string | null>(null);
+  const [purgeStatements, setPurgeStatements] = useState(false);
   const deleteAccount = useDeleteAccount();
 
   function handleDelete(force = false) {
     if (!account) return;
     setConflictMessage(null);
     deleteAccount.mutate(
-      { uuid: account.id, force },
+      { uuid: account.id, force, purgeStatements: force ? purgeStatements : false },
       {
         onSuccess: () => onOpenChange(false),
         onError: (err) => {
@@ -40,7 +42,10 @@ export function DeleteAccountDialog({ open, onOpenChange, account }: DeleteAccou
   }
 
   function handleOpenChange(next: boolean) {
-    if (!next) setConflictMessage(null);
+    if (!next) {
+      setConflictMessage(null);
+      setPurgeStatements(false);
+    }
     onOpenChange(next);
   }
 
@@ -57,9 +62,26 @@ export function DeleteAccountDialog({ open, onOpenChange, account }: DeleteAccou
                   <p className="text-sm text-muted-foreground">
                     Force-deleting will permanently remove all transactions, investment holdings,
                     debt plan links, and balance history for this account. Debt payments sourced
-                    from this account will have their source cleared, and upload job references
-                    will be unlinked.
+                    from this account will have their source cleared. By default, imported
+                    statements are kept and just unlinked from this account — unless you choose to
+                    delete them below.
                   </p>
+                  <label className="flex items-start gap-2 pt-1">
+                    <Checkbox
+                      className="mt-0.5"
+                      checked={purgeStatements}
+                      onCheckedChange={(checked) => setPurgeStatements(checked === true)}
+                    />
+                    <span className="space-y-0.5">
+                      <span className="block text-sm font-medium text-foreground">
+                        Also delete imported statement files for this account
+                      </span>
+                      <span className="block text-xs text-muted-foreground">
+                        By default, statements stay in your Documents and are just unlinked. Check
+                        this to permanently delete the statement files too.
+                      </span>
+                    </span>
+                  </label>
                 </>
               ) : (
                 <p>

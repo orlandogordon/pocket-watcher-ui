@@ -47,10 +47,26 @@ export function useUpdateAccount() {
 export function useDeleteAccount() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ uuid, force }: { uuid: string; force?: boolean }) =>
-      apiFetch<void>(`/accounts/${uuid}${force ? '?force=true' : ''}`, {
+    mutationFn: ({
+      uuid,
+      force,
+      purgeStatements,
+    }: {
+      uuid: string;
+      force?: boolean;
+      // Only meaningful with force=true; the backend ignores it otherwise.
+      // When set, statement documents are deleted (and their files purged)
+      // instead of merely unlinked from the account.
+      purgeStatements?: boolean;
+    }) => {
+      const params = new URLSearchParams();
+      if (force) params.set('force', 'true');
+      if (force && purgeStatements) params.set('purge_statements', 'true');
+      const query = params.toString();
+      return apiFetch<void>(`/accounts/${uuid}${query ? `?${query}` : ''}`, {
         method: 'DELETE',
-      }),
+      });
+    },
     onSuccess: (_data, { force }) => {
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
       if (force) {
