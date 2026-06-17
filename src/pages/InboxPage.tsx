@@ -13,17 +13,22 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
-import { apiFetch } from '@/lib/api';
-import { formatCurrency, formatDate, formatTypeLabel } from '@/lib/format';
-import {
-  dataHealthKeys,
-  useAttentionAction,
-  useAttentionItems,
-} from '@/hooks/useDataHealth';
-import { useTransaction } from '@/hooks/useTransactions';
-import { useQueryClient } from '@tanstack/react-query';
+import { formatCurrency, formatDate } from '@/lib/format';
+import { useAttentionAction, useAttentionItems } from '@/hooks/useDataHealth';
+import { useBulkUpdateTransactions, useTransaction } from '@/hooks/useTransactions';
 import { TransactionFormDialog } from '@/components/transactions/TransactionFormDialog';
 import { ConfidenceChip } from '@/components/inbox/ConfidenceChip';
+import { NeedsReviewWorkspace } from '@/components/inbox/NeedsReviewWorkspace';
+import {
+  getAccountName,
+  getAmount,
+  getCategory,
+  getComments,
+  getDate,
+  getDescription,
+  getMerchant,
+  getTypeLabel,
+} from '@/components/inbox/inboxItem';
 import type {
   AttentionAction,
   AttentionItem,
@@ -31,7 +36,6 @@ import type {
   AttentionSeverity,
 } from '@/types/data-health';
 import { SEVERITY_RANK } from '@/types/data-health';
-import type { TransactionType } from '@/types/transactions';
 
 type TabValue = AttentionKind | 'all';
 
@@ -53,76 +57,6 @@ const SEVERITY_LABEL: Record<AttentionSeverity, string> = {
   suggested: 'Suggested',
   informational: 'FYI',
 };
-
-// Per-kind helpers that pull display values out of the `details` blob.
-// Backend keeps `details` loosely-typed for forward-compat; we narrow here.
-
-function getDate(item: AttentionItem): string | null {
-  const d = item.details as Record<string, unknown>;
-  return (
-    (d.transaction_date as string | undefined) ??
-    (d.value_date as string | undefined) ??
-    (d.out_date as string | undefined) ??
-    null
-  );
-}
-
-function getDescription(item: AttentionItem): string {
-  const d = item.details as Record<string, unknown>;
-  if (item.kind === 'snapshot_review') {
-    const acct = (d.account_name as string | undefined) ?? '—';
-    const reason = (d.review_reason as string | undefined) ?? '';
-    return reason ? `${acct} — ${reason}` : acct;
-  }
-  if (item.kind === 'transfer_pair') {
-    const outDesc = (d.out_description as string | undefined) ?? '—';
-    const inDesc = (d.in_description as string | undefined) ?? '—';
-    const outAcct = (d.out_account_name as string | undefined) ?? '—';
-    const inAcct = (d.in_account_name as string | undefined) ?? '—';
-    return `${outAcct}: ${outDesc} → ${inAcct}: ${inDesc}`;
-  }
-  return (d.description as string | undefined) ?? '—';
-}
-
-function getMerchant(item: AttentionItem): string | null {
-  const d = item.details as Record<string, unknown>;
-  return (d.merchant_name as string | undefined) ?? null;
-}
-
-function getAccountName(item: AttentionItem): string | null {
-  const d = item.details as Record<string, unknown>;
-  return (d.account_name as string | undefined) ?? null;
-}
-
-function getAmount(item: AttentionItem): string | null {
-  const d = item.details as Record<string, unknown>;
-  if (item.kind === 'snapshot_review') {
-    return (d.balance as string | undefined) ?? null;
-  }
-  return (d.amount as string | undefined) ?? null;
-}
-
-function getTypeLabel(item: AttentionItem): string | null {
-  const d = item.details as Record<string, unknown>;
-  const t = d.transaction_type as TransactionType | undefined;
-  if (t) return formatTypeLabel(t);
-  if (item.kind === 'transfer_pair') return 'TRANSFER';
-  if (item.kind === 'snapshot_review') return 'Snapshot';
-  return null;
-}
-
-function getCategory(item: AttentionItem): string | null {
-  const d = item.details as Record<string, unknown>;
-  const parent = (d.category_name as string | undefined) ?? null;
-  const sub = (d.subcategory_name as string | undefined) ?? null;
-  if (parent && sub) return `${parent} / ${sub}`;
-  return parent ?? null;
-}
-
-function getComments(item: AttentionItem): string | null {
-  const d = item.details as Record<string, unknown>;
-  return (d.comments as string | undefined) ?? null;
-}
 
 function ActionButton({ item, action }: { item: AttentionItem; action: AttentionAction }) {
   const mut = useAttentionAction();
@@ -186,12 +120,14 @@ const ROW_HEIGHT = 56;
 
 export function InboxPage() {
   const navigate = useNavigate();
-  const qc = useQueryClient();
   const { data, isLoading, isError, error } = useAttentionItems();
+  const bulkReview = useBulkUpdateTransactions();
 
   const [tab, setTab] = useState<TabValue>('all');
+  // Needs-review has two presentations: the grouped bulk-review workspace
+  // (default — clears a large backlog fast) and the original flat table.
+  const [needsReviewView, setNeedsReviewView] = useState<'grouped' | 'list'>('grouped');
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [bulkPending, setBulkPending] = useState(false);
 
   // Edit-dialog flow: clicking the row's edit affordance kicks off a fetch
   // for the underlying transaction; once it lands the dialog opens.
@@ -253,31 +189,17 @@ export function InboxPage() {
     );
   }
 
-  async function bulkMarkReviewed() {
+  function bulkMarkReviewed() {
     if (!bulkEligible || selected.size === 0) return;
-    setBulkPending(true);
-    try {
-      const targets = filtered.filter((i) => selected.has(i.id));
-      // Each item's primary action for needs_review is the DELETE tag link.
-      // Fire in parallel; rate-limiting is fine at this scale (≤ a few hundred).
-      await Promise.allSettled(
-        targets.map((item) => {
-          const action = item.actions[0];
-          if (!action) return Promise.resolve();
-          return apiFetch(action.href, {
-            method: action.method,
-            body: action.body ? JSON.stringify(action.body) : undefined,
-          });
-        }),
-      );
-    } finally {
-      setBulkPending(false);
-      setSelected(new Set());
-      qc.invalidateQueries({ queryKey: dataHealthKeys.items() });
-      qc.invalidateQueries({ queryKey: dataHealthKeys.count() });
-      qc.invalidateQueries({ queryKey: ['transactions'] });
-      qc.invalidateQueries({ queryKey: ['tags', 'stats'] });
-    }
+    // One atomic call strips the "Needs Review" system tag from every selected
+    // row (clear_review) — replaces the old per-item DELETE fan-out.
+    const uuids = filtered
+      .filter((i) => selected.has(i.id))
+      .map((i) => i.subject.primary_uuid);
+    bulkReview.mutate(
+      { uuids, patch: {}, clear_review: true },
+      { onSuccess: () => setSelected(new Set()) },
+    );
   }
 
   function openRecord(item: AttentionItem) {
@@ -342,10 +264,28 @@ export function InboxPage() {
         </TabsList>
       </Tabs>
 
-      {bulkEligible && selected.size > 0 && (
+      {bulkEligible && (
+        <div className="flex items-center gap-2">
+          <Tabs
+            value={needsReviewView}
+            onValueChange={(v) => setNeedsReviewView(v as 'grouped' | 'list')}
+          >
+            <TabsList className="h-8">
+              <TabsTrigger value="grouped" className="text-xs">
+                Grouped
+              </TabsTrigger>
+              <TabsTrigger value="list" className="text-xs">
+                List
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
+      )}
+
+      {bulkEligible && needsReviewView === 'list' && selected.size > 0 && (
         <BulkBar
           count={selected.size}
-          pending={bulkPending}
+          pending={bulkReview.isPending}
           onMarkReviewed={bulkMarkReviewed}
           onClear={() => setSelected(new Set())}
         />
@@ -358,6 +298,8 @@ export function InboxPage() {
           <AlertCircle className="h-4 w-4" />
           Failed to load inbox{error?.message ? `: ${error.message}` : ''}.
         </p>
+      ) : bulkEligible && needsReviewView === 'grouped' ? (
+        <NeedsReviewWorkspace items={filtered} />
       ) : filtered.length === 0 ? (
         <div className="flex flex-1 items-center justify-center">
           <div className="text-center text-sm text-muted-foreground">

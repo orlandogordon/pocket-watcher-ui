@@ -60,10 +60,36 @@ export interface TransactionCreate {
   amount: string;
   transaction_type: string;
   description: string;
-  merchant_name?: string;
+  merchant_name?: string | null;
   category_uuid?: string | null;
   subcategory_uuid?: string | null;
-  comments?: string;
+  comments?: string | null;
+}
+
+/**
+ * Partial patch for the bulk-update endpoint (`PATCH /transactions/bulk`).
+ * Only keys *present* in the object are written; an explicit `null` clears the
+ * column. Omitted keys are left untouched — so the bulk-edit panel must build
+ * this object from its opt-in toggles, including only enabled fields.
+ */
+export interface BulkTransactionPatch {
+  category_uuid?: string | null;
+  subcategory_uuid?: string | null;
+  transaction_type?: string;
+  merchant_name?: string | null;
+  comments?: string | null;
+}
+
+export interface BulkTransactionUpdate {
+  uuids: string[];
+  patch: BulkTransactionPatch; // only present keys are written
+  add_tag_uuids?: string[];
+  remove_tag_uuids?: string[];
+  clear_review?: boolean; // driven by the "mark reviewed" toggle
+}
+
+export interface BulkTransactionUpdateResponse {
+  updated: number;
 }
 
 export interface AmortizationAllocation {

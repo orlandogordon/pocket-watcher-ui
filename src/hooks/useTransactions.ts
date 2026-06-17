@@ -1,5 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api';
+import { dataHealthKeys } from '@/hooks/useDataHealth';
+import type { AttentionItem } from '@/types/data-health';
 import type {
   TransactionCreate,
   TransactionFilters,
@@ -12,6 +14,8 @@ import type {
   TransactionRelationshipResponse,
   TransactionRelationshipCreate,
   TransactionRelationshipUpdate,
+  BulkTransactionUpdate,
+  BulkTransactionUpdateResponse,
 } from '@/types/transactions';
 
 function buildQuery(filters: TransactionFilters): string {
@@ -79,6 +83,42 @@ export function useUpdateTransaction() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       queryClient.invalidateQueries({ queryKey: ['transfers'] });
+    },
+  });
+}
+
+/**
+ * Atomic bulk update for the grouped inbox review workspace
+ * (`PATCH /transactions/bulk`, backend #81). Applies one `patch` + optional tag
+ * add/remove + `clear_review` to every uuid in a single round-trip.
+ *
+ * When `clear_review` is true the rows leave the needs_review queue, so we
+ * optimistically drop them from the cached `/data-health/items` array (that
+ * fetch is ~2s warm at scale). When it is false the rows stay in the queue —
+ * we skip the optimistic removal and just refetch so the new fields show.
+ */
+export function useBulkUpdateTransactions() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: BulkTransactionUpdate) =>
+      apiFetch<BulkTransactionUpdateResponse>('/transactions/bulk', {
+        method: 'PATCH',
+        body: JSON.stringify(body),
+      }),
+    onSuccess: (_data, body) => {
+      if (body.clear_review) {
+        const applied = new Set(body.uuids);
+        queryClient.setQueryData<AttentionItem[]>(dataHealthKeys.items(), (prev) =>
+          prev?.filter(
+            (i) => !(i.kind === 'needs_review' && applied.has(i.subject.primary_uuid)),
+          ),
+        );
+      }
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['transfers'] });
+      queryClient.invalidateQueries({ queryKey: dataHealthKeys.items() });
+      queryClient.invalidateQueries({ queryKey: dataHealthKeys.count() });
+      queryClient.invalidateQueries({ queryKey: ['tags', 'stats'] });
     },
   });
 }

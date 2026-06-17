@@ -134,10 +134,10 @@ export function TransactionFormDialog({
       amount: values.amount,
       transaction_type: values.transaction_type || 'PURCHASE',
       description: values.description,
-      merchant_name: values.merchant_name || undefined,
+      merchant_name: values.merchant_name || null,
       category_uuid: values.category_uuid || null,
       subcategory_uuid: values.subcategory_uuid || null,
-      comments: values.comments || undefined,
+      comments: values.comments || null,
     };
 
     if (isEdit && transaction) {
