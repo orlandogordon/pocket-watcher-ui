@@ -4,11 +4,13 @@ import { CheckCircle2, History, Upload, X, Layers } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { UploadForm } from '@/components/uploads/UploadForm';
+import { DemoSampleButtons } from '@/components/uploads/DemoSampleButtons';
 import { PreviewSession } from '@/components/uploads/PreviewSession';
 import { LlmStatusPill } from '@/components/uploads/LlmStatusPill';
 import { ReconciliationBanner } from '@/components/uploads/ReconciliationBanner';
 import { usePreviewSessions, useCancelSession } from '@/hooks/useStatementUpload';
 import { formatDateTime } from '@/lib/format';
+import { DEMO_MODE } from '@/lib/demo';
 import { INSTITUTION_LABELS } from '@/types/uploads';
 import type { ConfirmResponse, PreviewResponse, Institution } from '@/types/uploads';
 
@@ -162,12 +164,14 @@ export function UploadsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button size="sm" variant="outline" asChild>
-            <Link to="/onboarding">
-              <Layers className="mr-1 h-4 w-4" />
-              Bulk import
-            </Link>
-          </Button>
+          {!DEMO_MODE && (
+            <Button size="sm" variant="outline" asChild>
+              <Link to="/onboarding">
+                <Layers className="mr-1 h-4 w-4" />
+                Bulk import
+              </Link>
+            </Button>
+          )}
           <Button size="sm" variant="outline" asChild>
             <Link to="/uploads/history">
               <History className="mr-1 h-4 w-4" />
@@ -183,7 +187,11 @@ export function UploadsPage() {
             <LlmStatusPill />
           </div>
           <ActiveSessions onResume={(id) => setStep({ kind: 'preview', sessionId: id })} />
-          <UploadForm onPreviewReady={handlePreviewReady} />
+          {DEMO_MODE ? (
+            <DemoSampleButtons onPreviewReady={handlePreviewReady} />
+          ) : (
+            <UploadForm onPreviewReady={handlePreviewReady} />
+          )}
         </>
       )}
 

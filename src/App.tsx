@@ -1,4 +1,5 @@
-import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { DEMO_MODE } from '@/lib/demo';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { RequireAuth } from '@/components/layout/RequireAuth';
 import { RequireAdmin } from '@/components/layout/RequireAdmin';
@@ -32,7 +33,13 @@ export default function App() {
         <Routes>
           <Route path="/sign-in" element={<SignInPage />} />
           <Route element={<RequireAuth />}>
-            <Route path="onboarding" element={<OnboardingPage />} />
+            {/* The bulk-import wizard has a free-form file dropzone, which the
+                demo can't allow (backend 403s non-sample uploads). Point it at
+                the samples-only uploads page instead. */}
+            <Route
+              path="onboarding"
+              element={DEMO_MODE ? <Navigate to="/uploads" replace /> : <OnboardingPage />}
+            />
             <Route element={<AppLayout />}>
               <Route index element={<DashboardPage />} />
               <Route path="accounts" element={<AccountsPage />} />

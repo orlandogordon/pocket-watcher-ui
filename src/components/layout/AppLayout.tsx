@@ -25,6 +25,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useAccounts } from '@/hooks/useAccounts';
 import { useAttentionCount } from '@/hooks/useDataHealth';
 import { Button } from '@/components/ui/button';
+import { DEMO_MODE } from '@/lib/demo';
+import { DemoBanner } from '@/components/layout/DemoBanner';
 
 const primaryNav = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
@@ -156,14 +158,17 @@ export function AppLayout() {
                 <p className="truncate text-sm font-medium">{user.username}</p>
                 <p className="truncate text-xs text-muted-foreground">{user.email}</p>
               </div>
-              <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={logout}>
-                <LogOut className="h-4 w-4" />
-              </Button>
+              {!DEMO_MODE && (
+                <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={logout}>
+                  <LogOut className="h-4 w-4" />
+                </Button>
+              )}
             </div>
           )}
         </div>
       </aside>
       <main className="flex flex-1 flex-col overflow-y-auto">
+        {DEMO_MODE && <DemoBanner />}
         <Outlet />
       </main>
     </div>
