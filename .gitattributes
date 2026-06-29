@@ -1,0 +1,5 @@
+# Demo statement samples must stay byte-identical to the backend's DEMO_MODE
+# upload allowlist (it matches on sha256). Marking them `binary` stops git from
+# rewriting line endings (this repo's dev machine has core.autocrlf=true), which
+# would change the bytes and 403 every sample in the live demo.
+public/demo-samples/*.csv binary
