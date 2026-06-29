@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useAuth } from '@/contexts/AuthContext';
 import { ApiError } from '@/lib/api';
+import { DEMO_MODE } from '@/lib/demo';
 import {
   Card,
   CardContent,
@@ -40,8 +41,8 @@ export function SignInPage() {
     defaultValues: { email: '', password: '' },
   });
 
-  // Already logged in — redirect to home
-  if (user) {
+  // Already logged in, or demo mode (no sign-in screen — auto-login handles it).
+  if (user || DEMO_MODE) {
     return <Navigate to="/" replace />;
   }
 
